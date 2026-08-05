@@ -68,8 +68,78 @@
         <p style="line-height:1.9;">The result? Information overload. Analysis paralysis. Revenge trading. Blown
           accounts. And worst of all — the belief that you are not cut out for this.</p>
       </div>
-      <div style="display:flex;justify-content:center;align-items:center;">
-        <img src="images/bull-logo.webp" alt="Reality FX" style="max-width:70%;opacity:0.12;filter:grayscale(100%);">
+      <div class="chart-art-wrap">
+        <svg class="chart-art" viewBox="0 0 440 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="goldUp" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#E5C158" />
+              <stop offset="100%" stop-color="#C9A227" />
+            </linearGradient>
+            <linearGradient id="fadeArea" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="rgba(201,162,39,0.10)" />
+              <stop offset="100%" stop-color="rgba(201,162,39,0)" />
+            </linearGradient>
+          </defs>
+
+          <!-- Faint horizontal guides -->
+          <line x1="20" y1="100" x2="420" y2="100" stroke="rgba(201,162,39,0.035)" stroke-width="1" />
+          <line x1="20" y1="150" x2="420" y2="150" stroke="rgba(201,162,39,0.035)" stroke-width="1" />
+          <line x1="20" y1="200" x2="420" y2="200" stroke="rgba(201,162,39,0.035)" stroke-width="1" />
+
+          <!-- Candle 1 (bull) -->
+          <line x1="55" y1="140" x2="55" y2="205" stroke="rgba(201,162,39,0.25)" stroke-width="1" />
+          <rect x="50" y="155" width="10" height="38" rx="2" fill="url(#goldUp)" />
+
+          <!-- Candle 2 (bear) -->
+          <line x1="100" y1="110" x2="100" y2="220" stroke="rgba(201,162,39,0.18)" stroke-width="1" />
+          <rect x="95" y="110" width="10" height="60" rx="2" fill="none" stroke="rgba(201,162,39,0.30)"
+            stroke-width="1" />
+
+          <!-- Candle 3 (bull) -->
+          <line x1="145" y1="165" x2="145" y2="250" stroke="rgba(201,162,39,0.25)" stroke-width="1" />
+          <rect x="140" y="190" width="10" height="45" rx="2" fill="url(#goldUp)" />
+
+          <!-- Candle 4 (bull) -->
+          <line x1="190" y1="80" x2="190" y2="170" stroke="rgba(201,162,39,0.25)" stroke-width="1" />
+          <rect x="185" y="90" width="10" height="62" rx="2" fill="url(#goldUp)" opacity="0.9" />
+
+          <!-- Candle 5 (bear) -->
+          <line x1="235" y1="125" x2="235" y2="230" stroke="rgba(201,162,39,0.18)" stroke-width="1" />
+          <rect x="230" y="125" width="10" height="65" rx="2" fill="none" stroke="rgba(201,162,39,0.28)"
+            stroke-width="1" />
+
+          <!-- Candle 6 (bull) -->
+          <line x1="280" y1="60" x2="280" y2="140" stroke="rgba(201,162,39,0.30)" stroke-width="1" />
+          <rect x="275" y="68" width="10" height="55" rx="2" fill="url(#goldUp)" />
+
+          <!-- Candle 7 (bull) -->
+          <line x1="325" y1="95" x2="325" y2="180" stroke="rgba(201,162,39,0.25)" stroke-width="1" />
+          <rect x="320" y="102" width="10" height="50" rx="2" fill="url(#goldUp)" />
+
+          <!-- Candle 8 (bear) -->
+          <line x1="370" y1="85" x2="370" y2="190" stroke="rgba(201,162,39,0.18)" stroke-width="1" />
+          <rect x="365" y="85" width="10" height="58" rx="2" fill="none" stroke="rgba(201,162,39,0.30)"
+            stroke-width="1" />
+
+          <!-- Candle 9 (bull — highlighted) -->
+          <line x1="415" y1="50" x2="415" y2="132" stroke="rgba(201,162,39,0.40)" stroke-width="1" />
+          <rect x="410" y="58" width="10" height="55" rx="2" fill="url(#goldUp)" />
+          <circle cx="415" cy="85" r="16" fill="rgba(201,162,39,0.06)" style="mix-blend-mode:screen;" />
+
+          <!-- Primary trend line -->
+          <path d="M 55 170 C 130 195, 170 130, 235 145 S 350 75, 415 83" stroke="#C9A227" stroke-width="1" fill="none"
+            opacity="0.75" stroke-linecap="round" />
+
+          <!-- Secondary dotted line for depth -->
+          <path d="M 55 180 C 130 205, 170 140, 235 155 S 350 85, 415 93" stroke="rgba(201,162,39,0.18)"
+            stroke-width="0.8" fill="none" stroke-linecap="round" stroke-dasharray="3 4" />
+
+          <!-- Soft area fill under trend -->
+          <path d="M 55 170 C 130 195, 170 130, 235 145 S 350 75, 415 83 V 300 H 55 Z" fill="url(#fadeArea)" />
+
+          <!-- End dot -->
+          <circle cx="415" cy="83" r="2" fill="#E5C158" />
+        </svg>
       </div>
     </div>
   </section>
