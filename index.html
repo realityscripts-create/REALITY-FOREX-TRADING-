@@ -13,8 +13,6 @@
     href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;1,400&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
-  <base target="_blank">
-  <base target="_blank">
 </head>
 
 <body>
@@ -82,7 +80,7 @@
   </div>
 
   <!-- Hero -->
-  <section class="hero">
+  <section class="hero" style="align-items:flex-start;">
     <div class="container hero-grid">
       <div class="hero-content">
         <span class="eyebrow">Premium Trading Education</span>
@@ -106,9 +104,51 @@
           alt="Reality FX Bull Logo">
         <div class="sweep"></div>
         <div class="sweep-2"></div>
+        <span class="spark" style="left:18%;top:72%;animation-delay:0s;"></span>
+        <span class="spark" style="left:80%;top:26%;animation-delay:1.6s;"></span>
+        <span class="spark" style="left:58%;top:84%;animation-delay:3.2s;"></span>
+        <span class="spark" style="left:30%;top:36%;animation-delay:4.8s;"></span>
+        <span class="spark" style="left:68%;top:58%;animation-delay:5.6s;"></span>
+        <!-- Golden dust storm — the bull emerges from a cloud of energy -->
+        <div class="dust-cloud" style="width:55%;height:42%;left:46%;top:56%;"></div>
+        <div class="dust-cloud" style="width:42%;height:34%;left:64%;top:30%;animation-delay:3.6s;"></div>
+        <div class="dust-cloud" style="width:38%;height:30%;left:58%;top:72%;animation-delay:7.2s;"></div>
+        <!-- Dust particles flowing backward off the bull's rear -->
+        <span class="ember" style="left:58%;top:66%;animation-delay:0s;"></span>
+        <span class="ember" style="left:72%;top:40%;animation-delay:1.6s;"></span>
+        <span class="ember" style="left:64%;top:82%;animation-delay:3.2s;"></span>
+        <span class="ember" style="left:80%;top:58%;animation-delay:4.8s;"></span>
+        <span class="ember" style="left:54%;top:30%;animation-delay:6.4s;"></span>
+        <span class="ember" style="left:76%;top:74%;animation-delay:8s;"></span>
+        <!-- Golden orbital arc lines framing the upper right -->
+        <svg class="hero-arcs" viewBox="0 0 400 400" fill="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="arcGoldHero" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="rgba(229,193,88,0.95)" />
+              <stop offset="100%" stop-color="rgba(201,162,39,0.3)" />
+            </linearGradient>
+          </defs>
+          <circle class="arc arc-1" cx="300" cy="170" r="150" stroke="url(#arcGoldHero)" stroke-width="1.6"
+            stroke-linecap="round" stroke-dasharray="200 742" opacity="0.6" />
+          <circle class="arc arc-2" cx="300" cy="170" r="205" stroke="url(#arcGoldHero)" stroke-width="1"
+            stroke-linecap="round" stroke-dasharray="120 1168" opacity="0.35" />
+          <circle class="arc arc-3" cx="300" cy="170" r="100" stroke="url(#arcGoldHero)" stroke-width="1"
+            stroke-linecap="round" stroke-dasharray="110 518" opacity="0.45" />
+        </svg>
+        <!-- Ground dust explosion — the charge kicks up a wide cloud -->
+        <div class="ground-dust"></div>
+        <div class="ground-dust ground-dust-2"></div>
+        <!-- Fine dust grains scattered along the ground -->
+        <span class="ground-grain" style="left:22%;bottom:12%;animation-delay:0s;"></span>
+        <span class="ground-grain" style="left:36%;bottom:7%;animation-delay:1.4s;"></span>
+        <span class="ground-grain" style="left:52%;bottom:14%;animation-delay:2.8s;"></span>
+        <span class="ground-grain" style="left:68%;bottom:8%;animation-delay:4.2s;"></span>
+        <span class="ground-grain" style="left:84%;bottom:13%;animation-delay:5.6s;"></span>
+        <span class="ground-grain" style="left:30%;bottom:20%;animation-delay:2.1s;"></span>
+        <span class="ground-grain" style="left:62%;bottom:20%;animation-delay:3.4s;"></span>
       </div>
     </div>
-    <div class="scroll-indicator">
+    <div class="scroll-indicator" role="button" tabindex="0" aria-label="Scroll down">
       <span>Scroll</span>
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="6 9 12 15 18 9" />
@@ -236,7 +276,7 @@
               <path d="M18 20V4" />
               <path d="M6 20v-4" />
             </svg></div>
-          <h3>Equity Builder%</h3>
+          <h3>Equity Builder</h3>
           <p>Managed accounts by our trusted mentors. Average 70% monthly ROI through disciplined, institutional-grade
             portfolio management.</p>
           <a href="our-services.html#equity-builder" class="card-link">+ Learn More</a>
@@ -310,6 +350,10 @@
         <div class="meter-box reveal">
           <div class="meter-value">0</div>
           <div class="meter-label">Minutes</div>
+        </div>
+        <div class="meter-box reveal">
+          <div class="meter-value">00</div>
+          <div class="meter-label">Seconds</div>
         </div>
       </div>
       <div class="meter-footer">
@@ -471,7 +515,7 @@
           <h4>Services</h4>
           <ul class="footer-links">
             <li><a href="our-services.html#golden-signals">Golden Signals</a></li>
-            <li><a href="our-services.html#equity-builder">Equity Builder%</a></li>
+            <li><a href="our-services.html#equity-builder">Equity Builder</a></li>
             <li><a href="our-services.html#reality-academy">Reality Academy</a></li>
             <li><a href="our-services.html#risk-management">Risk Management</a></li>
             <li><a href="evaluation.html">Free Evaluation</a></li>
@@ -488,14 +532,62 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <p>&copy; 2024 Reality FX. All rights reserved.</p>
-        <details class="disclaimer">
-          <summary>Risk Disclaimer</summary>
-          <p>Trading foreign exchange, commodities, and other financial instruments carries a high level of risk and may
-            not be suitable for all investors. Past performance is not indicative of future results. Reality FX provides
-            educational content and mentorship only. We do not guarantee profits. You should carefully consider your
-            investment objectives, level of experience, and risk appetite before trading.</p>
-        </details>
+        <p>&copy; 2026 Reality FX. All rights reserved.</p>
+        <div class="legal-dropdowns">
+          <details class="disclaimer">
+            <summary>Risk Disclaimer</summary>
+            <p>Trading foreign exchange, commodities, and other financial instruments carries a high level of risk and may
+              not be suitable for all investors. Past performance is not indicative of future results. Reality FX provides
+              educational content and mentorship only. We do not guarantee profits. You should carefully consider your
+              investment objectives, level of experience, and risk appetite before trading.</p>
+          </details>
+          <details class="disclaimer">
+            <summary>Terms &amp; Conditions</summary>
+            <h4>Business Transparency &amp; Compliance Statement</h4>
+            <p>Reality FX operates as a transparent education and mentorship provider. We are committed to honesty in
+              how we market, price, and deliver our services. Every program detail — what is included, what is not, and
+              what you can reasonably expect — is stated clearly before you purchase.</p>
+            <h4>Commitment to Ethical Practices</h4>
+            <p>We hold ourselves to the highest ethical standards. We never guarantee profits, never pressure you into
+              decisions, and never sell you something that is not in your interest. Our mentorship is educational
+              guidance, not financial advice — and we will always tell you the difference.</p>
+            <h4>Transparency of Services</h4>
+            <p>You will always know exactly what you are paying for: the curriculum, the mentorship hours, the duration
+              of access, and any additional resources. If a program changes, we will tell you before you commit — never
+              after.</p>
+            <h4>User Responsibility</h4>
+            <p>You are responsible for the decisions you make with your own capital. We provide the education, tools,
+              and discipline framework; applying them consistently is your part of the partnership. Trading involves
+              risk, and no educational program can remove that risk — it can only prepare you to manage it.</p>
+            <h4>No Guarantee of Results</h4>
+            <p>Results depend on your effort, consistency, capital, and the markets themselves. Past performance — ours
+              or any trader's — is not a promise of future results. Anyone who guarantees trading income is not being
+              honest with you; we will never be that person.</p>
+          </details>
+          <details class="disclaimer">
+            <summary>Refund Policy</summary>
+            <h4>The Honest Guarantee</h4>
+            <p>We are not here to take your money and disappear. If you complete the first chapter of any course and
+              genuinely feel it is not for you, email us within 7 days of purchase and we will refund you in full — no
+              questions, no friction, no hard feelings. We would rather earn a client for life than keep a fee from
+              someone who felt misled.</p>
+            <h4>Why Chapter One Is Deliberately Light</h4>
+            <p>Chapter 1 is your orientation — a gentle introduction that lays the groundwork in plain language. The
+              real depth arrives in Chapter 2 and beyond: the precise entry models, risk mathematics, live session
+              breakdowns, and the discipline frameworks that take time to build properly. We tell you this upfront so
+              the first chapter never feels like a bait-and-switch.</p>
+            <h4>See the Depth Before You Commit</h4>
+            <p>Because we never want you buying on faith, the full curriculum outline — every chapter, module, and
+              lesson — is available to you before purchase. Review what Chapters 2 to 13 actually contain and judge the
+              level of detail for yourself before spending a cent. Contact us for a guided preview of any later chapter
+              before you buy; we are happy to show you the depth.</p>
+            <h4>After Chapter One</h4>
+            <p>Once you have completed the first chapter and continued into the full program, refunds no longer apply —
+              by then you have seen the depth, the value, and the standard of teaching, and full curriculum access has
+              been delivered. If you are ever unhappy with your experience, contact us anyway: we resolve issues fairly,
+              case by case, because a single unhappy student is a cost we never want to carry.</p>
+          </details>
+        </div>
       </div>
     </div>
   </footer>
