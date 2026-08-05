@@ -139,26 +139,46 @@ a:hover {
   overflow: hidden;
 }
 
-.btn-primary {
-  background: var(--accent-gold);
-  color: var(--bg-deep);
-}
-
-.btn-primary:hover {
-  background: var(--accent-gold-light);
-  transform: translateY(-2px);
-  box-shadow: 0 0 40px rgba(201, 162, 39, 0.15);
-}
-
+/* ── Unified Dark Button — primary & ghost share the same theme ── */
+.btn-primary,
 .btn-ghost {
-  background: transparent;
-  color: var(--accent-gold);
-  border: 1px solid var(--accent-gold);
+  background: #000000;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
 }
 
+.btn-primary::before,
+.btn-ghost::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(201, 162, 39, 0.25) 45%,
+      rgba(201, 162, 39, 0.5) 50%,
+      rgba(201, 162, 39, 0.25) 55%,
+      transparent 100%);
+  transition: left 0.6s ease;
+  z-index: -1;
+}
+
+.btn-primary:hover,
 .btn-ghost:hover {
-  background: var(--accent-gold);
-  color: var(--bg-deep);
+  color: #ffffff;
+  border-color: var(--accent-gold);
+  transform: translateY(-2px);
+  box-shadow: 0 0 30px rgba(201, 162, 39, 0.2);
+}
+
+.btn-primary:hover::before,
+.btn-ghost:hover::before {
+  left: 100%;
 }
 
 .btn-crimson {
@@ -289,13 +309,14 @@ a:hover {
 }
 
 .nav-links .btn-primary {
-  color: var(--bg-deep) !important;
+  color: #ffffff !important;
 }
 
 .nav-links .btn-primary:hover,
 .nav-links .btn-primary.active {
-  color: var(--bg-deep) !important;
-  background: var(--accent-gold-light);
+  color: #ffffff !important;
+  background: #000000;
+  border-color: var(--accent-gold);
 }
 
 .nav-links .btn-primary::after {
@@ -1515,6 +1536,8 @@ a:hover {
 }
 
 .job-listing {
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(145deg, #111, #0a0a0a);
   border: 1px solid var(--glass-border);
   border-radius: 16px;
@@ -1523,9 +1546,27 @@ a:hover {
   transition: var(--transition);
 }
 
+/* Gold top-line that sweeps in on hover */
+.job-listing::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+  opacity: 0;
+  transition: var(--transition);
+}
+
 .job-listing:hover {
-  border-color: var(--border-subtle);
-  transform: translateY(-3px);
+  border-color: var(--accent-gold);
+  transform: translateY(-4px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45), 0 0 28px rgba(201, 162, 39, 0.15);
+}
+
+.job-listing:hover::before {
+  opacity: 1;
 }
 
 .job-listing h3 {
@@ -1771,4 +1812,344 @@ a:hover {
   max-width: 480px;
   height: auto;
   display: block;
+}
+
+/* ============================================
+   CAREERS PAGE
+   ============================================ */
+
+/* ── Hero: subtle trading-desk grid + gold glows ── */
+.careers-hero {
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(201, 162, 39, 0.10), transparent 55%),
+    radial-gradient(ellipse at 85% 80%, rgba(201, 162, 39, 0.07), transparent 50%),
+    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+    var(--bg-primary);
+  background-size: auto, auto, 60px 60px, 60px 60px, auto;
+}
+
+/* ── Why Join / Benefits icon boxes ── */
+.icon-emoji {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  font-size: 1.6rem;
+  color: var(--accent-gold);
+  background: rgba(201, 162, 39, 0.1);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  margin-bottom: 1.25rem;
+  transition: var(--transition);
+}
+
+.icon-emoji svg {
+  width: 24px;
+  height: 24px;
+}
+
+.card:hover .icon-emoji,
+.benefit-item:hover .icon-emoji {
+  border-color: var(--accent-gold);
+  transform: translateY(-2px) scale(1.06);
+  box-shadow: 0 0 20px rgba(201, 162, 39, 0.15);
+}
+
+.why-grid .card p {
+  margin-bottom: 0;
+}
+
+/* ── Culture values ── */
+.value-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.value-card {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, #141414, #0c0c0c);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 1.75rem 1.5rem;
+  transition: var(--transition);
+}
+
+/* Gold top-line that sweeps in on hover */
+.value-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.value-card:hover {
+  border-color: var(--accent-gold);
+  transform: translateY(-4px);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.45), 0 0 28px rgba(201, 162, 39, 0.15);
+}
+
+.value-card:hover::before {
+  opacity: 1;
+}
+
+.value-card:hover .value-number {
+  opacity: 1;
+}
+
+.value-card:hover h3 {
+  color: var(--accent-gold);
+}
+
+.value-number {
+  font-family: var(--font-heading);
+  font-size: 2.2rem;
+  color: var(--accent-gold);
+  opacity: 0.55;
+  line-height: 1;
+  display: block;
+  margin-bottom: 0.75rem;
+  transition: var(--transition);
+}
+
+.value-card h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.35rem;
+  transition: var(--transition);
+}
+
+.value-card p {
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+/* ── Open positions ── */
+.department-group {
+  margin-bottom: 3.5rem;
+}
+
+.department-group:last-child {
+  margin-bottom: 0;
+}
+
+.department-title {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  border-bottom: 1px solid var(--glass-border);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.job-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.job-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.85rem;
+  border-radius: 20px;
+  background: rgba(201, 162, 39, 0.12);
+  color: var(--accent-gold);
+  border: 1px solid var(--border-subtle);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.job-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.job-listing .btn {
+  margin-top: 0.5rem;
+}
+
+/* ── Coming soon card ── */
+.coming-soon {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  background: linear-gradient(145deg, rgba(201, 162, 39, 0.08), rgba(201, 162, 39, 0.02));
+  border: 1px dashed var(--border-subtle);
+  border-radius: 16px;
+  padding: 2.5rem;
+  flex-wrap: wrap;
+  transition: var(--transition);
+}
+
+.coming-soon:hover {
+  border-color: var(--accent-gold);
+  background: linear-gradient(145deg, rgba(201, 162, 39, 0.12), rgba(201, 162, 39, 0.04));
+}
+
+.coming-soon-icon {
+  font-size: 2.2rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  color: var(--accent-gold);
+}
+
+.coming-soon-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.coming-soon h3 {
+  font-size: 1.25rem;
+  margin-bottom: 0.35rem;
+  color: var(--accent-gold);
+}
+
+.coming-soon p {
+  margin: 0;
+  font-size: 0.9rem;
+  max-width: 55ch;
+}
+
+.coming-soon .btn {
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  .coming-soon .btn {
+    margin-left: 0;
+  }
+}
+
+/* ── Hiring process timeline ── */
+.timeline {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 15px;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background: linear-gradient(180deg, var(--accent-gold), rgba(201, 162, 39, 0.08));
+}
+
+.timeline-item {
+  position: relative;
+  padding: 0 0 2.5rem 4.5rem;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-dot {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #1c1c1c, #0d0d0d);
+  border: 1px solid var(--accent-gold);
+  color: var(--accent-gold);
+  font-family: var(--font-heading);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  box-shadow: 0 0 0 5px rgba(201, 162, 39, 0.06);
+}
+
+.timeline-content {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 1.4rem 1.6rem;
+  transition: var(--transition);
+}
+
+.timeline-content:hover {
+  border-color: var(--border-subtle);
+  transform: translateY(-2px);
+}
+
+.timeline-content h3 {
+  font-size: 1.05rem;
+  margin-bottom: 0.3rem;
+}
+
+.timeline-content p {
+  font-size: 0.85rem;
+  margin: 0;
+  line-height: 1.7;
+}
+
+/* ── Benefits grid ── */
+.benefit-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.benefit-item {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 14px;
+  padding: 1.75rem 1.5rem;
+  transition: var(--transition);
+}
+
+.benefit-item:hover {
+  border-color: var(--border-subtle);
+  transform: translateY(-3px);
+}
+
+.benefit-item .icon-emoji {
+  margin-bottom: 1rem;
+}
+
+.benefit-item h3 {
+  font-size: 1rem;
+  margin-bottom: 0.3rem;
+}
+
+.benefit-item p {
+  font-size: 0.82rem;
+  margin: 0;
+  line-height: 1.6;
+}
+
+@media (max-width: 640px) {
+  .value-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .job-head {
+    flex-direction: column;
+  }
+
+  .timeline-item {
+    padding-left: 3.75rem;
+  }
 }
