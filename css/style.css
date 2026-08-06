@@ -38,7 +38,9 @@ body {
   background: var(--bg-primary);
   color: var(--text-body);
   line-height: 1.7;
-  overflow-x: hidden;
+  /* 'clip' (not 'hidden') so iOS Safari never creates the scroll container that
+     can clip very tall sections like the Careers job listings */
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -285,6 +287,7 @@ a:hover {
   text-transform: uppercase;
   color: var(--text-body);
   position: relative;
+  white-space: nowrap;
 }
 
 .nav-links a::after {
@@ -321,6 +324,21 @@ a:hover {
 
 .nav-links .btn-primary::after {
   display: none;
+}
+
+.nav-links .btn-primary {
+  white-space: nowrap;
+}
+
+/* Mid-range widths: keep the full nav on one line */
+@media (max-width: 1200px) {
+  .nav-links {
+    gap: 1.25rem;
+  }
+
+  .nav-links a {
+    letter-spacing: 0.08em;
+  }
 }
 
 .hamburger {
@@ -1388,11 +1406,11 @@ a:hover {
 }
 
 /* ── Multi-step Form ── */
-.form-step {
+.js .form-step {
   display: none;
 }
 
-.form-step.active {
+.js .form-step.active {
   display: block;
   animation: fadeIn 0.4s ease;
 }
@@ -1456,13 +1474,13 @@ a:hover {
   transform: rotate(45deg);
 }
 
-.accordion-body {
+.js .accordion-body {
   max-height: 0;
   overflow: hidden;
   transition: max-height 0.4s ease;
 }
 
-.accordion-item.open .accordion-body {
+.js .accordion-item.open .accordion-body {
   max-height: 300px;
 }
 
@@ -1602,16 +1620,24 @@ a:hover {
   }
 }
 
-/* ── Scroll Reveal ── */
-.reveal {
+/* ── Scroll Reveal ──
+   Content is visible by default; the hidden state only applies when JS is running
+   (html.js), so sections can never be stuck invisible on mobile if JS stalls. */
+.js .reveal {
   opacity: 0;
   transform: translateY(30px);
   transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-.reveal.visible {
+.js .reveal.visible {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* Job cards: keep the classy 0.8s fade on reveal, but preserve their own snappy
+   hover timing (their own transition would otherwise speed up the fade-in). */
+.js .reveal.job-listing {
+  transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform var(--transition);
 }
 
 /* ── Page Transitions ── */

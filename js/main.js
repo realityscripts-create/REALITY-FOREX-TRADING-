@@ -29,16 +29,55 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   // ── Scroll Reveal ──
+  // Content is visible by default; the hidden state only applies once JS is confirmed
+  // running (so listings/text can never be stuck invisible on slow or broken mobile JS).
+  document.documentElement.classList.add('js');
   const revealElements = document.querySelectorAll('.reveal');
-  const revealObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('visible');
-        revealObserver.unobserve(entry.target);
+
+  // Simple, universally-compatible reveal check: add .visible to anything on screen.
+  // Runs on load and on every scroll/resize, so content can never stay hidden even if
+  // IntersectionObserver misbehaves on some mobile browsers (tall sections, rootMargin
+  // quirks, etc.).
+  const revealInView = () => {
+    const vh = window.innerHeight;
+    revealElements.forEach(el => {
+      if (el.classList.contains('visible')) return;
+      const r = el.getBoundingClientRect();
+      if (r.top < vh && r.bottom > 0) {
+        el.classList.add('visible');
       }
     });
-  }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
-  revealElements.forEach(el => revealObserver.observe(el));
+  };
+
+  if ('IntersectionObserver' in window) {
+    // Fast path for modern browsers: fire the moment any part of an element enters view.
+    const revealObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          revealObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0 });
+    revealElements.forEach(el => revealObserver.observe(el));
+  } else {
+    // Old browsers without IntersectionObserver: skip the animation, show everything.
+    revealElements.forEach(el => el.classList.add('visible'));
+  }
+
+  window.addEventListener('scroll', revealInView, { passive: true });
+  window.addEventListener('resize', revealInView);
+  revealInView();
+
+  // Periodic sweep: a guaranteed safety net so content can never stay hidden, even
+  // if scroll events are missed or IntersectionObserver stalls on a device.
+  // Stops itself once every reveal has fired.
+  const revealSweep = setInterval(() => {
+    revealInView();
+    if (revealElements.length === document.querySelectorAll('.reveal.visible').length) {
+      clearInterval(revealSweep);
+    }
+  }, 600);
 
   // ── Testimonial Slider ──
   const slides = document.querySelectorAll('.testimonial-slide');
