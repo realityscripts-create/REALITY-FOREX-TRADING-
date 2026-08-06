@@ -2135,47 +2135,6 @@ a:hover {
   animation-duration: 6.5s;
 }
 
-/* ── Golden orbital arc lines — framing the upper right ── */
-.hero-visual .hero-arcs {
-  position: absolute;
-  top: -14%;
-  right: -16%;
-  width: 88%;
-  height: 88%;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.9;
-  transition: opacity 0.5s ease;
-}
-
-.hero-visual .hero-arcs .arc {
-  transform-box: fill-box;
-  transform-origin: center;
-  filter: drop-shadow(0 0 5px rgba(201, 162, 39, 0.35));
-}
-
-.hero-visual .hero-arcs .arc-1 {
-  animation: arc-orbit 26s linear infinite;
-}
-
-.hero-visual .hero-arcs .arc-2 {
-  animation: arc-orbit 44s linear infinite reverse;
-}
-
-.hero-visual .hero-arcs .arc-3 {
-  animation: arc-orbit 19s linear infinite reverse;
-}
-
-@keyframes arc-orbit {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* ── Ground dust explosion — the charge kicks up a wide cloud ── */
 .hero-visual .ground-dust {
   position: absolute;
@@ -2257,15 +2216,7 @@ a:hover {
   }
 }
 
-/* Hover — arcs brighten, dust billows wider, grains rise faster */
-.hero-visual:hover .hero-arcs {
-  opacity: 1;
-}
-
-.hero-visual:hover .hero-arcs .arc {
-  filter: drop-shadow(0 0 9px rgba(201, 162, 39, 0.55));
-}
-
+/* Hover — dust billows wider, grains rise faster */
 .hero-visual:hover .ground-dust,
 .hero-visual:hover .ground-dust-2 {
   animation-duration: 7s;
@@ -2275,15 +2226,8 @@ a:hover {
   animation-duration: 6s;
 }
 
-/* Mobile — scale the orbital arcs and ground dust down with the bull */
+/* Mobile — scale the ground dust down with the bull */
 @media (max-width: 968px) {
-  .hero-visual .hero-arcs {
-    width: 72%;
-    height: 72%;
-    top: -6%;
-    right: -8%;
-  }
-
   .hero-visual .ground-dust {
     width: 100%;
     height: 34%;
