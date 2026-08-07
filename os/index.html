@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reality FX OS — Student Academy</title>
+<meta name="description" content="The interactive trading academy by Reality FX. Every lesson is a trade. Every trade is a lesson.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/os.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐂</text></svg>">
+</head>
+<body>
+
+<div class="topbar">
+  <button id="burger" aria-label="Menu">☰</button>
+  <span class="brand-serif">Reality FX</span><span class="brand-os">OS</span>
+</div>
+
+<div id="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="brand-serif">Reality FX</span><span class="brand-os">OS</span>
+    </div>
+    <div class="brand-tag">The Trading Academy</div>
+
+    <nav class="nav">
+      <a class="nav-item" data-route="#/profile"><span class="ni-ic">👤</span>My Profile</a>
+      <a class="nav-item active" data-route="#/"><span class="ni-ic">🏛️</span>Dashboard</a>
+      <a class="nav-item" data-route="#/map"><span class="ni-ic">🗺️</span>Journey</a>
+      <a class="nav-item" data-route="#/progress"><span class="ni-ic">📊</span>Performance</a>
+      <a class="nav-item" data-route="#/mod"><span class="ni-ic">🛡️</span>Fair Play</a>
+      <a class="nav-item" data-route="#/path"><span class="ni-ic">🧭</span>Your Path</a>
+      <a class="nav-item" data-route="#/certificate"><span class="ni-ic">🎓</span>Certificate</a>
+      <a class="nav-item" data-route="#/vault"><span class="ni-ic">🗝️</span>Academy Vault</a>
+      <a class="nav-item"><span class="ni-ic">📝</span>Trade Journal<span class="ni-soon">SOON</span></a>
+      <a class="nav-item" data-route="#/lab"><span class="ni-ic">🧪</span>Laboratory</a>
+      <a class="nav-item"><span class="ni-ic">🤖</span>AI Mentor<span class="ni-soon">SOON</span></a>
+    </nav>
+
+    <div class="side-foot">
+      <div class="side-rank">
+        <div class="rank-ic" id="sideRankIc">🌱</div>
+        <div>
+          <div class="rank-name" id="sideRankName">Novice</div>
+          <div class="rank-xp" id="sideRankXp">0 XP</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <main id="view"></main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/os.js"></script>
+</body>
+</html>
