@@ -1059,6 +1059,46 @@ h2 { font-family: var(--font-heading); font-size: clamp(26px, 3.4vw, 38px); font
 .sess-lbl { font-size: 9.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-dim); }
 .sess-time { font-family: var(--font-heading); font-size: 17px; color: var(--accent-gold-light); letter-spacing: 1px; font-variant-numeric: tabular-nums; }
 
+/* Verified identity pill — shown when System A's handoff delivered this
+   student (greeting, passport page and certificate all carry the identity). */
+.verified-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  margin: 4px 0 10px; padding: 6px 14px; border-radius: 999px;
+  font-size: 11.5px; letter-spacing: 0.4px;
+  color: var(--accent-gold-light);
+  background: rgba(201, 162, 39, 0.08);
+  border: 1px solid rgba(201, 162, 39, 0.35);
+}
+.verified-pill::before {
+  content: ""; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--ok); box-shadow: 0 0 8px rgba(46, 139, 87, 0.8);
+}
+
+/* Single-session guard — the lock screen (kicked from another device,
+   or paused after inactivity). Re-entering the Student ID resumes. */
+.sess-lock {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(4, 4, 4, 0.88); backdrop-filter: blur(6px);
+  padding: 20px;
+}
+.sess-lock-card {
+  background: var(--bg-card); border: 1px solid var(--glass-border);
+  border-radius: 18px; padding: 34px; max-width: 420px; width: 100%;
+  text-align: center; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+.sess-lock-ic { color: var(--accent-gold-light); margin-bottom: 12px; filter: drop-shadow(0 0 12px rgba(201, 162, 39, 0.45)); }
+.sess-lock-ic svg { width: 46px; height: 46px; display: block; margin: 0 auto; }
+.sess-lock-sub { color: var(--text-muted); font-size: 13.5px; margin: 8px 0 18px; line-height: 1.55; }
+.sess-lock-input {
+  width: 100%; padding: 12px 14px; border-radius: 10px;
+  background: var(--bg-raise); border: 1px solid var(--glass-border);
+  color: var(--text); font-family: var(--font-body); letter-spacing: 0.5px;
+  margin-bottom: 12px; text-align: center;
+}
+.sess-lock-btn { width: 100%; }
+.sess-lock-err { color: #e8928a; font-size: 12px; min-height: 16px; margin-top: 10px; }
+
 /* ============================================================
    BADGES
    ============================================================ */

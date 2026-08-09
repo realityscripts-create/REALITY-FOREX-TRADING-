@@ -190,6 +190,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   // ── Smooth Scroll for Anchor Links ──
   document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+    if (anchor.hasAttribute('data-os-login')) return; // OS link — handled by its own listener
     anchor.addEventListener('click', function (e) {
       const target = document.querySelector(this.getAttribute('href'));
       if (target) {
@@ -331,6 +332,276 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         errorBox.textContent = 'Something went wrong. Please try again, or message us directly on WhatsApp.';
       }
+    });
+  });
+
+  // ── Enrol Now — the website → System A pipeline (FOR-LEE 9.15) ──
+  // Production: email-first capture → PayPal/Stripe checkout → server-side
+  // verified webhook → System A POST /api/enroll → invoice + registration
+  // emails fire automatically. Demo: same UX; the "webhook" is simulated and
+  // hands the approved-payment facts to System A through its own admin page
+  // (hidden iframe + postMessage), so a REAL enrollment lands in the
+  // registrar's console — zero duplicated logic, same code path as the
+  // webhook. Point at your running System A with:
+  //   window.RFX_SYSTEM_A_URL = 'http://127.0.0.1:8124'   (or ?rfx-sa=URL)
+  const SYSTEM_A_URL = (function () {
+    const q = new URLSearchParams(location.search).get('rfx-sa');
+    return (window.RFX_SYSTEM_A_URL || q || 'http://127.0.0.1:8124').replace(/\/+$/, '');
+  })();
+  const ENROLL_SECRET = 'rfx-demo-website-bridge';
+
+  function escHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // Email-first capture: the moment payment is confirmed, System A fires the
+  // invoice + registration emails to this address — no human in the loop.
+  function readCardPrice(el) {
+    const m = (el.textContent || '').match(/[\d.,]+/);
+    return m ? parseFloat(m[0].replace(/,/g, '')) : null;
+  }
+
+  function sendPaymentToSystemA(payment, cb) {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'display:none;';
+    iframe.src = SYSTEM_A_URL + '/admin.html';
+    document.body.appendChild(iframe);
+    let replied = false;
+    const onMsg = function (ev) {
+      const d = ev.data || {};
+      if (d.type !== 'RFX_ENROLL_OK') return;
+      replied = true;
+      window.removeEventListener('message', onMsg);
+      cb(d);
+    };
+    window.addEventListener('message', onMsg);
+    const tryPost = function (n) {
+      if (replied) return;
+      try { iframe.contentWindow.postMessage({ type: 'RFX_ENROLL', secret: ENROLL_SECRET, payment: payment }, '*'); } catch (e) {}
+      if (n < 10) { setTimeout(function () { tryPost(n + 1); }, 500); }
+      else if (!replied) { cb(null); }
+    };
+    iframe.addEventListener('load', function () { tryPost(0); });
+    setTimeout(function () { tryPost(0); }, 1500);
+    setTimeout(function () { if (!replied) { replied = true; cb(null); } }, 14000);
+  }
+
+  // ── Abandoned-cart recovery ──
+  // The moment a student reaches the checkout step (email entered, payment
+  // not yet completed), a draft is saved on this device. If they leave and
+  // come back, a gold recovery bar invites them to resume with everything
+  // pre-filled — no second round of typing, no lost course. Paying clears it.
+  const CART_KEY = 'rfx_enroll_draft';
+  const CART_WAIT_MS = 30 * 60 * 1000; // show the recovery bar only after 30 min
+
+  function saveCartDraft(d) {
+    try {
+      d.savedAt = Date.now();
+      localStorage.setItem(CART_KEY, JSON.stringify(d));
+    } catch (e) {}
+  }
+  function clearCartDraft() {
+    try { localStorage.removeItem(CART_KEY); } catch (e) {}
+  }
+  function loadCartDraft() {
+    try {
+      const raw = localStorage.getItem(CART_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) { return null; }
+  }
+
+  function cartDraftFor(card, method) {
+    const h3 = card.querySelector('.program-header h3');
+    const course = h3 ? h3.textContent.trim() : 'Reality Academy Program';
+    const priceEl = card.querySelector('.program-price');
+    const price = priceEl ? readCardPrice(priceEl) : null;
+    return { course: course, price: price, method: method || 'PayPal' };
+  }
+
+  // Reopen the exact checkout a student left behind, with their details in place.
+  function resumeCart(d) {
+    const card = document.createElement('div');
+    card.innerHTML = '<div class="program-card"><div class="program-header"><h3>' + escHtml(d.course) + '</h3></div>' +
+      '<div class="program-price">' + (d.price != null ? 'R ' + d.price.toLocaleString('en-ZA') : 'R —') + '</div></div>';
+    const real = card.firstElementChild;
+    openEnroll(real, d.method || 'PayPal', { name: d.name || '', email: d.email || '' });
+  }
+
+  // The recovery bar — gold, quiet, dismissible; appears only when a draft is
+  // old enough that the student genuinely walked away.
+  function checkAbandonedCart() {
+    const d = loadCartDraft();
+    if (!d || !d.email) return;
+    if (Date.now() - (d.savedAt || 0) < CART_WAIT_MS) return;
+    const bar = document.createElement('div');
+    bar.className = 'rfx-cart-bar';
+    bar.innerHTML =
+      '<div class="rfx-cart-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg></div>' +
+      '<div class="rfx-cart-txt"><b>Your enrolment is waiting — ' + escHtml(d.course) + '</b>' +
+      '<span>' + escHtml(d.email) + (d.price != null ? ' · ' + 'R ' + d.price.toLocaleString('en-ZA') : '') + ' · your details are saved on this device</span></div>' +
+      '<button type="button" class="btn btn-primary rfx-cart-resume">Resume enrolment</button>' +
+      '<button type="button" class="rfx-cart-x" aria-label="Dismiss">✕</button>';
+    document.body.appendChild(bar);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { bar.classList.add('show'); }); });
+    bar.querySelector('.rfx-cart-resume').addEventListener('click', function () {
+      bar.classList.remove('show');
+      setTimeout(function () { bar.remove(); resumeCart(d); }, 350);
+    });
+    bar.querySelector('.rfx-cart-x').addEventListener('click', function () {
+      clearCartDraft();
+      bar.classList.remove('show');
+      setTimeout(function () { bar.remove(); }, 350);
+    });
+  }
+
+  function openEnroll(card, method, prefill) {
+    prefill = prefill || {};
+    const h3 = card.querySelector('.program-header h3');
+    const course = h3 ? h3.textContent.trim() : 'Reality Academy Program';
+    const priceEl = card.querySelector('.program-price');
+    const price = priceEl ? readCardPrice(priceEl) : null;
+    const priceStr = price != null ? 'R ' + price.toLocaleString('en-ZA') : 'R —';
+
+    const overlay = document.createElement('div');
+    overlay.className = 'form-overlay';
+    overlay.innerHTML =
+      '<div class="form-modal rfx-enroll-modal" role="dialog" aria-modal="true" aria-labelledby="rfx-enroll-title">' +
+      '<button type="button" class="rfx-enroll-x" aria-label="Close">✕</button>' +
+      '<div class="rfx-enroll-step rfx-enroll-step-1">' +
+      '<div class="rfx-enroll-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22 6 12 13 2 6"/></svg></div>' +
+      '<h3 id="rfx-enroll-title">Begin your enrolment</h3>' +
+      '<div class="rfx-enroll-summary">' +
+      '<div class="rfx-enroll-line"><span>' + escHtml(course) + '</span><b>' + priceStr + '</b></div>' +
+      '<div class="rfx-enroll-line small"><span>Payment method</span><b>' + escHtml(method) + '</b></div>' +
+      '</div>' +
+      '<p class="rfx-enroll-hint">Email comes first — your Reality FX invoice and secure registration link are delivered there the moment payment is confirmed.</p>' +
+      '<input class="rfx-enroll-input" id="rfx-enroll-name" placeholder="Full name" autocomplete="name" value="' + escHtml(prefill.name || '') + '">' +
+      '<input class="rfx-enroll-input" id="rfx-enroll-email" type="email" placeholder="Email address" autocomplete="email" value="' + escHtml(prefill.email || '') + '">' +
+      '<div class="rfx-enroll-err" id="rfx-enroll-err"></div>' +
+      '<button type="button" class="btn btn-primary rfx-enroll-next" style="width:100%;">Continue to secure checkout</button>' +
+      '</div>' +
+      '<div class="rfx-enroll-step rfx-enroll-step-2" hidden>' +
+      '<div class="rfx-enroll-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>' +
+      '<h3 id="rfx-enroll-title">Secure checkout</h3>' +
+      '<div class="rfx-checkout-box">' +
+      '<div class="rfx-enroll-line"><span>' + escHtml(course) + '</span><b>' + priceStr + '</b></div>' +
+      '<div class="rfx-enroll-line small"><span>Method</span><b>' + escHtml(method) + ' (demo)</b></div>' +
+      '<div class="rfx-enroll-line small"><span>Student</span><b id="rfx-enroll-who"></b></div>' +
+      '</div>' +
+      '<p class="rfx-enroll-hint">Demo checkout — a stand-in for the real ' + escHtml(method) + ' flow. In production you pay ' + escHtml(method) + ' here and Reality FX verifies the payment server-side before enrolling you.</p>' +
+      '<button type="button" class="btn btn-primary rfx-enroll-pay" style="width:100%;">Complete payment — ' + priceStr + ' (demo)</button>' +
+      '</div>' +
+      '<div class="rfx-enroll-step rfx-enroll-step-3" hidden>' +
+      '<div class="modal-check">' +
+      '<svg width="76" height="76" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">' +
+      '<circle class="check-circle" cx="12" cy="12" r="10" pathLength="100" />' +
+      '<polyline class="check-mark" points="8 12.5 11 15.5 16 9.5" pathLength="100" />' +
+      '</svg></div>' +
+      '<h3 id="rfx-enroll-title">Check your email</h3>' +
+      '<p>Payment confirmed. Your Reality FX invoice and secure registration link are on their way to <b class="rfx-enroll-email-out"></b>.</p>' +
+      '<div class="rfx-demo-inbox" id="rfx-enroll-inbox"><div class="rfx-enroll-wait">Contacting the registrar…</div></div>' +
+      '<button type="button" class="modal-close rfx-enroll-done">Done</button>' +
+      '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { overlay.classList.add('visible'); }); });
+
+    const steps = [overlay.querySelector('.rfx-enroll-step-1'), overlay.querySelector('.rfx-enroll-step-2'), overlay.querySelector('.rfx-enroll-step-3')];
+    const go = function (i) { steps.forEach(function (s, k) { s.hidden = k !== i; }); };
+    const closeModal = function () {
+      overlay.classList.remove('visible');
+      setTimeout(function () { overlay.remove(); }, 500);
+    };
+    overlay.querySelector('.rfx-enroll-x').addEventListener('click', closeModal);
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+    document.addEventListener('keydown', function onKey(e) { if (e.key === 'Escape') { closeModal(); document.removeEventListener('keydown', onKey); } });
+
+    const nameEl = overlay.querySelector('#rfx-enroll-name');
+    const emailEl = overlay.querySelector('#rfx-enroll-email');
+    const errEl = overlay.querySelector('#rfx-enroll-err');
+    overlay.querySelector('.rfx-enroll-next').addEventListener('click', function () {
+      const name = nameEl.value.trim();
+      const email = emailEl.value.trim();
+      if (!name) { errEl.textContent = 'Please enter your full name.'; return; }
+      if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { errEl.textContent = 'Please enter a valid email address.'; return; }
+      errEl.textContent = '';
+      overlay.querySelector('#rfx-enroll-who').textContent = name + ' · ' + email;
+      go(1);
+      // reached the checkout step → remember it so we can recover if they leave
+      saveCartDraft({ course: course, price: price, method: method, name: name, email: email });
+    });
+
+    overlay.querySelector('.rfx-enroll-pay').addEventListener('click', function () {
+      const name = nameEl.value.trim();
+      const email = emailEl.value.trim();
+      const btn = overlay.querySelector('.rfx-enroll-pay');
+      btn.disabled = true;
+      btn.textContent = 'Processing payment…';
+      const ref = new URLSearchParams(location.search).get('ref') || '';
+      const payment = {
+        customerName: name,
+        email: email,
+        course: course,
+        price: price != null ? price : 0,
+        currency: 'R',
+        paymentMethod: method,
+        transactionId: (method === 'Stripe' ? 'STRIPE-' : 'PP-') + Date.now() + '-' + Math.floor(Math.random() * 1e6),
+        referralCode: ref
+      };
+      sendPaymentToSystemA(payment, function (res) {
+        clearCartDraft(); // paid — nothing to recover
+        overlay.querySelector('.rfx-enroll-email-out').textContent = email;
+        const inbox = overlay.querySelector('#rfx-enroll-inbox');
+        if (res && res.ok) {
+          inbox.innerHTML =
+            '<div class="rfx-mail-row">' +
+            '<div class="rfx-mail-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+            '<div><div class="rfx-mail-subject">Invoice ' + escHtml(res.invoice || '') + ' — payment received</div>' +
+            '<div class="rfx-mail-note">Demo inbox · in production this arrives by email</div></div></div>' +
+            '<div class="rfx-mail-row">' +
+            '<div class="rfx-mail-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>' +
+            '<div><div class="rfx-mail-subject">Complete your Reality FX registration</div>' +
+            '<a class="rfx-mail-link" href="' + escHtml(res.link) + '">' + escHtml(res.link) + '</a>' +
+            '<div class="rfx-mail-note">Single-use · ' + (ref ? 'referral ' + escHtml(ref) + ' attached' : 'no referral') + ' · opens the secure registration wizard</div></div></div>';
+        } else {
+          inbox.innerHTML =
+            '<div class="rfx-mail-row">' +
+            '<div class="rfx-mail-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>' +
+            '<div><div class="rfx-mail-subject">Registrar not reachable</div>' +
+            '<div class="rfx-mail-note">The payment is recorded on this device, but System A is not running at ' + escHtml(SYSTEM_A_URL) + '. Start it (perl system-a-fork-server.pl …) and try again — the demo needs the registrar online.</div></div></div>';
+        }
+        go(2);
+      });
+    });
+    overlay.querySelector('.rfx-enroll-done').addEventListener('click', closeModal);
+    setTimeout(function () { try { nameEl.focus(); } catch (e) {} }, 350);
+  }
+
+  document.querySelectorAll('.btn-enroll').forEach(function (btn) {
+    btn.addEventListener('click', function (e) {
+      e.preventDefault();
+      const card = btn.closest('.program-card') || btn.parentElement;
+      openEnroll(card, btn.getAttribute('data-method') || 'PayPal');
+    });
+  });
+
+  // ── Abandoned-cart recovery: welcome wanderers back ──
+  checkAbandonedCart();
+
+  // ── Student Login → the Academy (RFX OS) ──
+  // The "Student Login" link (every page's nav + mobile menu) opens the OS.
+  // Defaults to the local academy server; point it at the live academy with:
+  //   window.RFX_OS_URL = 'https://academy.realityfx.co.za'  (or ?rfx-os=URL)
+  const OS_URL = (function () {
+    const q = new URLSearchParams(location.search).get('rfx-os');
+    return (window.RFX_OS_URL || q || 'http://127.0.0.1:49270/os/index.html').replace(/\/+$/, '');
+  })();
+  document.querySelectorAll('[data-os-login]').forEach(function (link) {
+    link.addEventListener('click', function (e) {
+      e.preventDefault();
+      window.open(OS_URL, '_blank', 'noopener');
     });
   });
 

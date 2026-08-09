@@ -11,9 +11,10 @@
 
   /* ---------- State ---------- */
   function defaultState() {
-    return { name: "", xp: 0, streak: 0, lastActive: "", traderStyle: null, chapters: {}, log: [], dwell: [], secs: 0, flags: [], styleSeen: [], distStreak: 0, distBest: 0, lastDistCh: null, chapStats: {}, justUnlocked: null,
+    return { name: "", xp: 0, streak: 0, lastActive: "", traderStyle: null, chapters: {}, log: [], dwell: [], secs: 0, flags: [], reportedFlags: [], styleSeen: [], distStreak: 0, distBest: 0, lastDistCh: null, chapStats: {}, justUnlocked: null,
       timeBadges: [], studyDays: [], dayKey: "", daySecs: 0,
-      profile: { name: "", email: "", phone: "", country: "", code: "", photo: "" } };
+      profile: { name: "", email: "", phone: "", country: "", code: "", photo: "" },
+      handoff: null };
   }
   /* Student profile — the single source of truth for identity. Phase 2
      registration will write the verified details here; for now it's the
@@ -31,6 +32,175 @@
     p.code = "RFX-" + String(Math.floor(100000 + Math.random() * 900000));
     save(); // persist the moment it's born — the code must never change between visits
     return p.code;
+  }
+
+  /* ---------- Handshake (System A bridge) ----------
+     The OS never creates identities. System A's registration machine delivers
+     an APPROVED student here and this OS *activates* them: the verified name,
+     Student ID, email and entitlements land in the student profile (the single
+     source of truth for the greeting, the passport page and the certificate).
+     No handoff (or a static file:// preview) simply keeps the local demo trader. */
+  function handoffRec() {
+    return (S.handoff && S.handoff.studentId) ? S.handoff : null;
+  }
+  function loadHandshake() {
+    return new Promise(function (resolve) {
+      try {
+        const sid = new URLSearchParams(location.search).get("sid");
+        if (!sid) { resolve(false); return; }
+        fetch("api/handoffs", { cache: "no-store" })
+          .then(r => { if (!r.ok) throw new Error("handoff store unavailable"); return r.json(); })
+          .then(function (list) {
+            const rec = (list || []).find(h => h.studentId === sid);
+            if (!rec) { resolve(false); return; }
+            const p = profile();
+            if (rec.verifiedName) { p.name = rec.verifiedName; S.name = rec.verifiedName; }
+            if (rec.studentId) p.code = rec.studentId;
+            if (rec.email) p.email = rec.email;
+            S.handoff = { studentId: rec.studentId, studentCode: rec.studentCode || "", status: rec.status || "ACTIVE", printTrust: rec.printTrust || "standard", receivedAt: rec.receivedAt || "" };
+            save();
+            toast("Welcome, " + (rec.verifiedName || rec.studentId) + " — identity verified by Reality FX registration", "rank");
+            resolve(true);
+          })
+          .catch(function () { resolve(false); });
+      } catch (e) { resolve(false); }
+    });
+  }
+
+  /* ---------- Fair Play flags → academy server rail ----------
+     The integrity monitor raises flags locally (fast answers, suspicious
+     perfect scores). For verified students those flags are REPORTED to the
+     academy server (the handoff server's /os/api/flags endpoint), where the
+     moderator's SRM panel turns them into Trust Bar moves. Dedup: each flag
+     is reported once — the reported set remembers what the server already
+     holds, so re-saves never spam the moderator queue. Demo traders (no
+     handoff) never report; their flags stay device-local like everything
+     else in the demo build. */
+  function flagsSync() {
+    const sid = handoffRec() && handoffRec().studentId;
+    if (!sid) return;
+    const pending = (S.flags || []).filter(f => !(S.reportedFlags || []).some(r => r.type === f.type && r.ch === f.ch && r.qi === f.qi && r.ts === f.ts));
+    if (!pending.length) return;
+    fetch("api/flags/report", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ studentId: sid, flags: pending.map(f => ({ type: f.type, ch: f.ch, qi: f.qi, ms: f.ms || 0, ts: f.ts, note: f.note || "" })) }),
+      cache: "no-store"
+    }).then(r => { if (!r.ok) throw new Error("flags rail unreachable"); return r.json(); })
+      .then(function (res) {
+        if (!res || !res.accepted) return;
+        S.reportedFlags = (S.reportedFlags || []).concat(pending.map(f => ({ type: f.type, ch: f.ch, qi: f.qi, ts: f.ts })));
+        if (S.reportedFlags.length > 400) S.reportedFlags = S.reportedFlags.slice(-400);
+        save();
+      })
+      .catch(function () { /* server may be down — retried on next boot/save */ });
+  }
+
+  /* ---------- Single-session guard (verified students only) ----------
+     One active session per student account: signing in on another device
+     revokes this one everywhere (the handoff server enforces it — the
+     browser is never the final gatekeeper). Same-device tabs may coexist.
+     Inactivity locks the session after 15 minutes; re-entering the Student
+     ID resumes it. Demo traders (no handoff) skip the guard entirely. */
+  const SESSION_TIMEOUT_MS = 15 * 60 * 1000;
+  const SESSION_HEARTBEAT_MS = 30 * 1000;
+  let sessGuard = null, inactivityTimer = null, lastActivity = 0;
+  function deviceInfo() {
+    let d = "";
+    try { d = (navigator.userAgent || "") + "|" + screen.width + "x" + screen.height + "|" + (navigator.maxTouchPoints || 0); } catch (e) {}
+    let h = 0;
+    for (let i = 0; i < d.length; i++) h = (h * 31 + d.charCodeAt(i)) >>> 0;
+    const mobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || "") || (navigator.maxTouchPoints || 0) > 1;
+    return { deviceId: "dev-" + h.toString(16), deviceType: mobile ? "mobile" : "desktop" };
+  }
+  function sessionToken() {
+    if (S.session && S.session.token) return S.session;
+    const bytes = new Uint8Array(16);
+    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(bytes);
+    else for (let i = 0; i < 16; i++) bytes[i] = Math.floor(Math.random() * 256);
+    S.session = { token: Array.from(bytes, b => b.toString(16).padStart(2, "0")).join(""), device: deviceInfo() };
+    save();
+    return S.session;
+  }
+  function sessFetch(path, body) {
+    return fetch("api/" + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store" })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error("session server unreachable")))
+      .catch(function () { return null; });
+  }
+  function sessClaim() {
+    const sid = handoffRec() && handoffRec().studentId;
+    if (!sid) return Promise.resolve(null);
+    const st = sessionToken();
+    return sessFetch("session/claim", { studentId: sid, token: st.token, deviceId: st.device.deviceId, deviceType: st.device.deviceType }).then(r => {
+      if (r && r.kicked) toast("You replaced your session on another device — this one is now active.", "rank");
+      return r;
+    });
+  }
+  function sessPing() {
+    const sid = handoffRec() && handoffRec().studentId;
+    const st = S.session;
+    if (!sid || !st || !st.token) return;
+    sessFetch("session/heartbeat", { studentId: sid, token: st.token }).then(r => {
+      if (r && r.active === false) sessLock("kicked");
+    });
+  }
+  function sessRelease() {
+    const sid = handoffRec() && handoffRec().studentId;
+    const st = S.session;
+    if (!sid || !st || !st.token) return;
+    sessFetch("session/release", { studentId: sid, token: st.token });
+  }
+  function sessLock(reason) {
+    if (sessGuard) return; // already locked
+    const sid = handoffRec() && handoffRec().studentId;
+    const overlay = el("div", "sess-lock");
+    overlay.innerHTML = `
+      <div class="sess-lock-card">
+        <div class="sess-lock-ic">${reason === "kicked"
+          ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 11.5 11.5 14 15.5 9.5"/></svg>'
+          : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>'}</div>
+        <h3 class="gold-serif">${reason === "kicked" ? "Signed in on another device" : "Session paused for your security"}</h3>
+        <p class="sess-lock-sub">${reason === "kicked"
+          ? "This session was closed because your account signed in somewhere else. Only one active session is allowed at a time — that's how Reality FX protects the course material."
+          : "You've been inactive for a while. Enter your Student ID to continue where you left off."}</p>
+        <input class="sess-lock-input" placeholder="Student ID · e.g. RFX-10482" autocomplete="off">
+        <button class="btn-gold sess-lock-btn">${reason === "kicked" ? "Sign in on this device" : "Resume session"}</button>
+        <p class="sess-lock-err"></p>
+      </div>`;
+    document.body.appendChild(overlay);
+    sessGuard = overlay;
+    const inp = overlay.querySelector(".sess-lock-input");
+    const btn = overlay.querySelector(".sess-lock-btn");
+    const err = overlay.querySelector(".sess-lock-err");
+    const tryUnlock = () => {
+      const v = (inp.value || "").trim().toUpperCase();
+      if (!v || v !== sid) { err.textContent = "That doesn't match your Student ID — check it on your member panel."; return; }
+      sessClaim().then(() => {
+        overlay.remove(); sessGuard = null;
+        lastActivity = Date.now();
+        toast("Session restored — welcome back", "rank");
+      });
+    };
+    btn.addEventListener("click", tryUnlock);
+    inp.addEventListener("keydown", e => { if (e.key === "Enter") tryUnlock(); });
+    setTimeout(() => { try { inp.focus(); } catch (e) {} }, 50);
+  }
+  function startInactivityClock() {
+    if (!handoffRec()) return;
+    lastActivity = Date.now();
+    const bump = () => { lastActivity = Date.now(); };
+    ["pointerdown", "keydown", "pointermove"].forEach(ev => document.addEventListener(ev, bump, { passive: true }));
+    clearInterval(inactivityTimer);
+    inactivityTimer = setInterval(() => {
+      if (!document.hidden && handoffRec() && Date.now() - lastActivity > SESSION_TIMEOUT_MS) sessLock("inactive");
+    }, 30000);
+  }
+  function initSessionGuard() {
+    if (!handoffRec()) return;
+    sessClaim();
+    startInactivityClock();
+    setInterval(sessPing, SESSION_HEARTBEAT_MS);
+    window.addEventListener("beforeunload", sessRelease);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) sessPing(); });
   }
   function load() {
     try { return Object.assign(defaultState(), JSON.parse(localStorage.getItem(KEY) || "{}")); }
@@ -231,7 +401,17 @@
     sparkle: ICON('<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"/>'),
     chart:  ICON('<path d="M4 20V4M4 20h16"/><path d="M8 16l3-4 3 2 4-6"/>'),
     lock:   ICON('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>'),
-    clock:  ICON('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')
+    clock:  ICON('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+    alert:  ICON('<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'),
+    zap:    ICON('<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>'),
+    note:   ICON('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
+    target: ICON('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'),
+    lockOpen: ICON('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>'),
+    diamond: ICON('<path d="M12 2l4.5 4.5L12 22 7.5 6.5 12 2z"/><path d="M2 6.5h20M7.5 6.5L12 22l4.5-15.5"/>')
+  };
+  const NAV_ICONS = {
+    profile: "user", "": "home", map: "map", progress: "chart", mod: "shield",
+    path: "compass", certificate: "grad", vault: "key", lab: "flask"
   };
 
   /* ---------- Helpers ---------- */
@@ -494,7 +674,7 @@
     const ic = document.getElementById("sideRankIc");
     const nm = document.getElementById("sideRankName");
     const xp = document.getElementById("sideRankXp");
-    if (ic) ic.textContent = rank.icon;
+    if (ic) ic.innerHTML = window.OSIcon ? OSIcon("diamond") : rank.icon; // stroke diamond, not emoji
     if (nm) nm.textContent = rank.name;
     if (xp) xp.textContent = S.xp + " XP · " + progressPct() + "% course";
   }
@@ -502,7 +682,7 @@
   /* ---------- Router ---------- */
   function updateCertNav() {
     const ready = CHAPTERS.every(isComplete);
-    const certNav = document.querySelector('.nav-item[data-route="#/certificate"]');
+    const certNav = document.querySelector('.nav-item[data-route="certificate"]');
     if (!certNav) return;
     certNav.classList.toggle("nav-ready", ready);
     if (ready && !certNav.querySelector(".ni-ready")) {
@@ -521,7 +701,7 @@
     const view = parts[0] || "";
     const viewEl = $("#view");
     viewEl.innerHTML = "";
-    document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", n.dataset.route === ("#/" + view).replace(/#\/$/,"#/")));
+    document.querySelectorAll(".nav-item").forEach(n => n.classList.toggle("active", (n.dataset.route || "") === view));
 
     if (view === "map") renderMap(viewEl);
     else if (view === "path") renderPath(viewEl);
@@ -561,6 +741,7 @@
            </div>
            <p class="dash-cta-sub">Every chapter complete. Collect what you earned — and keep sharpening while you're here.</p>`;
 
+    const hoff = handoffRec();
     root.appendChild(el("div", "dash-hero", `
       <div class="sess-chip" title="Live session timer — auto-starts when you open the academy, stops when you leave">
         <span class="sess-dot"></span>
@@ -570,6 +751,7 @@
         <div>
           <p class="eyebrow">Reality FX OS · ${esc(today)}</p>
           <h1>Welcome back, <span class="gold-serif">${esc(name)}</span></h1>
+          ${hoff ? `<p class="verified-pill">${esc(hoff.studentId)} · ${esc(hoff.status || "ACTIVE")} · identity verified by Reality FX registration</p>` : ""}
           <p class="dash-sub">“${esc(QUOTE)}”</p>
           <div class="dash-cta">
             ${cta}
@@ -604,7 +786,8 @@
       { v: CHAPTERS.filter(isComplete).length + "/13", l: "Chapters completed", i: ICONS.trophy },
       { v: slidesSeen() + "/" + CHAPTERS.reduce((a, c) => a + c.slides, 0), l: "Slides explored", i: ICONS.book },
       { v: quizzesPassed(), l: "Quizzes passed", i: ICONS.check },
-      { v: S.streak + " day" + (S.streak === 1 ? "" : "s"), l: "Discipline streak", i: ICONS.flame }
+      { v: S.streak + " day" + (S.streak === 1 ? "" : "s"), l: "Discipline streak", i: ICONS.flame },
+      { v: S.distStreak + (S.distStreak === 1 ? " chapter" : " chapters") + " at 80%+", l: "Distinction streak", i: ICONS.diamond }
     ];
     const grid = el("div", "stat-grid");
     stats.forEach(s => grid.appendChild(el("div", "stat-card", `
@@ -659,7 +842,7 @@
       const got = earnedBadges.find(x => x.name === b.name);
       const ch = got ? got.ch : null;
       return `<div class="badge-tile ${owned ? "" : "locked"}" title="${esc(b.desc)}">
-        <div class="badge-tile-ic">${owned ? b.icon : "🔒"}</div>
+        <div class="badge-tile-ic">${owned ? b.icon : ICONS.lock}</div>
         <div><b>${b.name}</b><p>${owned ? "Earned" + (ch ? " · Chapter " + ch : (got && got.kind === "time") ? " · Study time" : "") : b.desc.split(".")[0]}</p></div>
       </div>`;
     }).join("");
@@ -816,10 +999,13 @@
   function renderProfile(root) {
     const p = profile();
     ensureCode(p);
+    const hoff = handoffRec();
     root.appendChild(el("div", "page-head", `
       <p class="eyebrow">Student access</p>
       <h2>Your profile</h2>
-      <p class="page-sub">Your identity record — the name here is exactly what prints on your certificate. Phase 2 registration will verify and lock these details; for now they're yours to keep accurate.</p>`));
+      <p class="page-sub">${hoff
+        ? "Your identity record — verified by Reality FX registration. The name here is exactly what prints on your certificate."
+        : "Your identity record — the name here is exactly what prints on your certificate. Phase 2 registration will verify and lock these details; for now they're yours to keep accurate."}</p>`));
 
     const card = el("div", "panel profile-card");
     card.innerHTML = `
@@ -828,7 +1014,9 @@
         <div class="profile-hero-txt">
           <p class="quiz-tag">Student passport</p>
           <h3 class="gold-serif">${esc(profileName() || "Welcome, Trader")}</h3>
-          <p class="profile-code">Student Code <b>${esc(p.code)}</b><span>your passport in the Academy · appears on your certificate</span></p>
+          ${hoff
+            ? `<p class="profile-code">Student ID <b>${esc(hoff.studentId)}</b><span>verified by Reality FX registration · your passport in the Academy</span></p>`
+            : `<p class="profile-code">Student Code <b>${esc(p.code)}</b><span>your passport in the Academy · appears on your certificate</span></p>`}
           <div class="pf-photo-ctl">
             <button class="btn-ghost sm" id="pf-photo-btn">${p.photo ? "Change photo" : "📷 Add photo"}</button>
             ${p.photo ? `<button class="btn-ghost sm danger" id="pf-photo-rm">Remove</button>` : ""}
@@ -930,7 +1118,7 @@
       const justOpened = unlocked && ch.id === unlockId && !done;
       const lockSvg = `<span class="lock-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><g class="lock-body"><rect x="5" y="11" width="14" height="9" rx="2"/></g><g class="lock-shackle"><path d="M8 11V7a4 4 0 0 1 8 0v4"/></g></svg></span>`;
       const node = el("div", "j-node" + (done ? " done" : "") + (unlocked ? " open" : " locked") + (justOpened ? " just-unlocked" : ""), `
-        <div class="j-dot">${done ? "✓" : unlocked ? `${lockSvg}<span class="j-num-bg">${ch.id}</span>` : "🔒"}</div>
+        <div class="j-dot">${done ? "✓" : unlocked ? `${lockSvg}<span class="j-num-bg">${ch.id}</span>` : `<span class="lock-ic dim" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span>`}</div>
         <div class="j-card ${unlocked ? "" : "j-dim"}">
           <div class="j-top"><span class="j-num">Chapter ${fmt(ch.id)}</span><span class="j-status">${label}</span></div>
           <h3 class="gold-serif">${esc(ch.title)}</h3>
@@ -1098,7 +1286,7 @@
     // gentle note-taking tip on slide 1 (once per chapter, dismissible — never a blocking popup)
     const noteTip = (!rev && n === 1 && !st.tipSeen)
       ? `<div class="note-tip">
-          <span class="note-tip-ic">📝</span>
+          <span class="note-tip-ic">${ICONS.note}</span>
           <p><b>Trader's habit:</b> write one line per slide as you read. When reflection time comes, your notes are the fastest way back to the material — and the reflection window gives you read-only access to re-read everything anyway.</p>
           <button class="note-tip-x" title="Dismiss">✕</button>
         </div>`
@@ -1299,6 +1487,7 @@
     if (correct && ms < 1400 && !S.flags.some(f => f.type === "fast" && f.ch === ch.id && f.qi === qi)) {
       S.flags.push({ type: "fast", ch: ch.id, qi, ms, ts: Date.now(), note: "Correct answer faster than reading speed — possible automated response." });
       if (S.flags.length > 200) S.flags = S.flags.slice(-200);
+      flagsSync(); // report to the academy server for moderator review
     }
     touch(); save();
     drawSlide(document.querySelector(".stage"));
@@ -1343,6 +1532,7 @@
     if (passed && score === 100 && total >= 5 && session.answeredCount && session.answeredCount.msSum < 5000) {
       S.flags.push({ type: "perfect-fast", ch: ch.id, score, msSum: session.answeredCount.msSum, n: session.answeredCount.n, ts: Date.now(), note: "100% in under 5s total — extremely unlikely for a human." });
       if (S.flags.length > 200) S.flags = S.flags.slice(-200);
+      flagsSync(); // report to the academy server for moderator review
     }
 
     // Badges + retake bookkeeping
@@ -1389,6 +1579,18 @@
       // only a RETRY consumes a token — the first attempt is free
       if (wasFailed || (st.retries || 0) > 0) st.retries = (st.retries || 0) + 1;
       if (!st.firstFailAt) st.firstFailAt = Date.now();
+    }
+
+    // Fair Play heuristic: a RETRY taken with negligible review. The 2h
+    // reflection window exists so a student actually studies the material
+    // before re-sitting — a retake with <60s of review (or none at all)
+    // is the classic brute-force pattern (memorise answers, never learn).
+    // Only the first offence per chapter is flagged — no spam. A first
+    // attempt is never a retake (firstFailAt unset → no flag).
+    if (st.firstFailAt && (wasFailed || (st.retries || 0) > 0) && (st.reviewSecs || 0) < 60 && !S.flags.some(f => f.type === "retake-abuse" && f.ch === ch.id)) {
+      S.flags.push({ type: "retake-abuse", ch: ch.id, qi: 0, ms: st.reviewSecs || 0, ts: Date.now(), note: "Retake with " + (st.reviewSecs || 0) + "s of review — the reflection window exists to study the material, not to brute-force the quiz." });
+      if (S.flags.length > 200) S.flags = S.flags.slice(-200);
+      flagsSync(); // report to the academy server for moderator review
     }
 
     // Distinction streak: consecutive chapters scored at 80%+ (counted once per chapter)
@@ -1899,7 +2101,7 @@
   function labRRPlanner() {
     const c = el("div", "tool-card");
     c.innerHTML = `
-      <div class="tool-head"><span class="tool-ic">🎯</span><div><h3>R:R Planner</h3><p class="tool-sub">How many R is your target worth?</p></div></div>
+      <div class="tool-head"><span class="tool-ic">${ICONS.target}</span><div><h3>R:R Planner</h3><p class="tool-sub">How many R is your target worth?</p></div></div>
       <div class="tool-in">
         <label>Entry price<input type="number" id="rr-entry" value="1.1000" step="0.0001"></label>
         <label>Stop loss<input type="number" id="rr-stop" value="1.0900" step="0.0001"></label>
@@ -1931,7 +2133,7 @@
   function labOutcomeR() {
     const c = el("div", "tool-card");
     c.innerHTML = `
-      <div class="tool-head"><span class="tool-ic">📊</span><div><h3>Trade Outcome → R</h3><p class="tool-sub">Measure the trade in R, not money</p></div></div>
+      <div class="tool-head"><span class="tool-ic">${ICONS.chart}</span><div><h3>Trade Outcome → R</h3><p class="tool-sub">Measure the trade in R, not money</p></div></div>
       <div class="tool-in">
         <label>Entry price<input type="number" id="ro-entry" value="1.1000" step="0.0001"></label>
         <label>Exit price<input type="number" id="ro-exit" value="1.1200" step="0.0001"></label>
@@ -2079,7 +2281,7 @@
       if (dead) return;
       const stage = $("#dd-stage");
       if (cut) {
-        stage.innerHTML = `<div class="dd-good"><b>🛡️ YOU CUT — the loss is accepted</b><p>It stings — every cut does. But the account is still yours, and the climb back is a plan, not a miracle.</p></div>`;
+        stage.innerHTML = `<div class="dd-good"><b>${ICONS.shield} YOU CUT — the loss is accepted</b><p>It stings — every cut does. But the account is still yours, and the climb back is a plan, not a miracle.</p></div>`;
         c.querySelector("#dd-log").insertAdjacentHTML("beforeend", `<div class="dd-voice ok">You stopped the bleed. This is the moment most blown accounts never reached.</div>`);
       } else {
         stage.innerHTML = `<div class="dd-good"><b>🏁 THE DESCENT ENDS</b><p>You took every trade the market offered. The account is bruised but alive — barely.</p></div>`;
@@ -2147,7 +2349,7 @@
     { r: -1,   note: "Price swept your stop — a clean, normal -1R loss." },
     { r: -1,   note: "Second loss. The same level failed twice." },
     { r: 1.5,  note: "Winner. The plan worked exactly — +1.5R." },
-    { r: -1,   note: "Third loss. ⚡ This is where the breaker trips." },
+    { r: -1,   note: "Third loss. This is where the breaker trips." },
     { r: -2,   tilt: true, note: "Revenge trade — doubled size to win it back. -2R." },
     { r: 1,    tilt: true, note: "You clawed one back. The temptation feels validated…" },
     { r: -1.5, tilt: true, note: "Revenge again — late entry, wider stop. -1.5R." },
@@ -2166,7 +2368,7 @@
     const tally = S.labCB;
 
     c.innerHTML = `
-      <div class="tool-head"><span class="tool-ic">⚡</span><div><h3>Circuit Breaker Experiment</h3><p class="tool-sub">Set your risk and your breaker — then feel what breaking it costs</p></div></div>
+      <div class="tool-head"><span class="tool-ic">${ICONS.zap}</span><div><h3>Circuit Breaker Experiment</h3><p class="tool-sub">Set your risk and your breaker — then feel what breaking it costs</p></div></div>
       <div class="cb-ctl">
         <label>Risk per trade
           <select id="cb-risk">${["0.5", "1", "2", "3"].map(v => `<option value="${v}" ${v === "1" ? "selected" : ""}>${v}%</option>`).join("")}</select>
@@ -2225,7 +2427,7 @@
       // tilt meter — emotional state, measured in R
       const fill = tilt ? 100 : Math.min(100, losses / T * 100);
       $("#cb-tilt-fill").style.width = fill + "%";
-      $("#cb-tilt-v").textContent = tilt ? "TILTED 🧨" : fill >= 70 ? "Shaken" : fill >= 35 ? "Nervous" : "Composed";
+      $("#cb-tilt-v").textContent = tilt ? "TILTED — REVENGE MODE" : fill >= 70 ? "Shaken" : fill >= 35 ? "Nervous" : "Composed";
       c.querySelector(".cb-meter").classList.toggle("cb-meter-hot", tilt);
     };
 
@@ -2268,7 +2470,7 @@
       const mult = Math.abs(chasedR) / Math.max(0.01, ref);
       stage.innerHTML = `
         <div class="cb-verdict ${disciplined ? "cb-good" : "cb-bad"}">
-          <b>${disciplined ? "🔒 Discipline held" : "🧨 You chased"}</b>
+          <b>${disciplined ? ICONS.lock + " Discipline held" : ICONS.alert + " You chased"}</b>
           <p>Day result: <b>${fmt(chasedR)}</b> <span>(${chasedR >= 0 ? "+" : ""}$${(chasedR * R).toFixed(2)})</span></p>
           ${disciplined
             ? `<p class="cb-compare">You walked away at ${fmt(chasedR)} — ${losses} loss${losses === 1 ? "" : "es"}, session closed. The market will be open tomorrow; your account is still whole.</p>
@@ -2303,7 +2505,7 @@
         tripTotal = total; // capture the REAL cost of stopping here (not T×1R)
         tripped = true;
         stage.innerHTML = `
-          <div class="cb-trip"><b>⚡ CIRCUIT BREAKER TRIPPED</b><p>${T} losses. Professionals stop here — Chapter 6 taught you the rule. What now?</p></div>
+          <div class="cb-trip"><b>${ICONS.zap} CIRCUIT BREAKER TRIPPED</b><p>${T} losses. Professionals stop here — Chapter 6 taught you the rule. What now?</p></div>
           <div class="cb-btns">
             <button class="btn-gold sm" id="cb-stop">Respect the breaker — stop for the day</button>
             <button class="btn-ghost sm danger" id="cb-chase">One more trade to win it back…</button>
@@ -2327,7 +2529,7 @@
         tripTotal = total;
         tripped = true;
         stage.innerHTML = `
-          <div class="cb-trip"><b>⚠️ THE STORM BEAT YOUR BREAKER</b><p>You set your breaker at ${T} losses — but the market turned violent first, and you were already in revenge territory before your rule could protect you. A breaker that's set too loose never gets to trip. What now?</p></div>
+          <div class="cb-trip"><b>${ICONS.alert} THE STORM BEAT YOUR BREAKER</b><p>You set your breaker at ${T} losses — but the market turned violent first, and you were already in revenge territory before your rule could protect you. A breaker that's set too loose never gets to trip. What now?</p></div>
           <div class="cb-btns">
             <button class="btn-gold sm" id="cb-stop">Stop the bleeding now</button>
             <button class="btn-ghost sm danger" id="cb-chase">One more trade to win it back…</button>
@@ -2396,20 +2598,20 @@
     const count = keys.size;
     const unlocked = count >= VAULT_BADGES_NEEDED;
     const missing = VAULT_BADGES_NEEDED - count;
-    const lock = unlocked ? "" : `<div class="vault-lock"><span>🔐</span><p>Earn <b>${missing}</b> more badge${missing === 1 ? "" : "s"} to enter. Badges are earned, not given: 80%+ for 🎖️ Honours, 100% for 💎 Flawless, a 90%+ retake for 🏆 Distinction Hunter, a fail-turned-pass for 🦁 Heart of a Lion, and your first pass for ⚔️ First Blood.</p><div class="vault-progress"><span style="width:${Math.min(100, count / VAULT_BADGES_NEEDED * 100)}%"></span></div><p class="vault-prog-t">${count}/${VAULT_BADGES_NEEDED} badges earned</p></div>`;
+    const lock = unlocked ? "" : `<div class="vault-lock"><span>${ICONS.lock}</span><p>Earn <b>${missing}</b> more badge${missing === 1 ? "" : "s"} to enter. Badges are earned, not given: 80%+ for 🎖️ Honours, 100% for 💎 Flawless, a 90%+ retake for 🏆 Distinction Hunter, a fail-turned-pass for 🦁 Heart of a Lion, and your first pass for ⚔️ First Blood.</p><div class="vault-progress"><span style="width:${Math.min(100, count / VAULT_BADGES_NEEDED * 100)}%"></span></div><p class="vault-prog-t">${count}/${VAULT_BADGES_NEEDED} badges earned</p></div>`;
 
     root.appendChild(el("div", "vault", `
       <div class="vault-hero">
-        <div class="vault-ic">${unlocked ? "🗝️" : "🔒"}</div>
+        <div class="vault-ic">${unlocked ? ICONS.lockOpen : ICONS.lock}</div>
         <h2 class="gold-serif">The Academy Vault</h2>
         <p class="vault-sub">${unlocked ? "Unlocked — reserved for the students who proved they want it more." : "The Vault holds what ordinary students never see: founder-level lessons and a network reserved for top performers."}</p>
       </div>
       ${lock}
       <div class="vault-sec ${unlocked ? "" : "dim"}">
-        <div class="vault-sec-head"><span class="vault-sec-ic">🎓</span><div><h3>Advanced Lessons</h3><p>Founder-level material, deeper than the course itself.</p></div>${unlocked ? "" : '<span class="ni-soon">LOCKED</span>'}</div>
+        <div class="vault-sec-head"><span class="vault-sec-ic">${ICONS.grad}</span><div><h3>Advanced Lessons</h3><p>Founder-level material, deeper than the course itself.</p></div>${unlocked ? "" : '<span class="ni-soon">LOCKED</span>'}</div>
         <div class="vault-grid">
           <div class="vault-slot"><span class="vault-slot-ic">📼</span><div><b>Replay the Market</b><p>Replay real market moves and dissect the decision-making in real time.</p></div><span class="ni-soon">SOON</span></div>
-          <div class="vault-slot"><span class="vault-slot-ic">🧠</span><div><b>The Institutional Playbook</b><p>How institutions build, manage and defend positions — the layer above retail.</p></div><span class="ni-soon">SOON</span></div>
+          <div class="vault-slot"><span class="vault-slot-ic">${ICONS.book}</span><div><b>The Institutional Playbook</b><p>How institutions build, manage and defend positions — the layer above retail.</p></div><span class="ni-soon">SOON</span></div>
           <div class="vault-slot"><span class="vault-slot-ic">🎙️</span><div><b>Live Trade Breakdowns</b><p>Recorded analyses of real setups — coming when the studio is ready.</p></div><span class="ni-soon">SOON</span></div>
         </div>
       </div>
@@ -2428,7 +2630,7 @@
     const pct = progressPct();
     if (pct < 100) {
       root.appendChild(el("div", "cert-locked", `
-        <div class="finish-ic">🔐</div>
+        <div class="finish-ic">${ICONS.lockOpen}</div>
         <h2 class="gold-serif">Your certificate awaits</h2>
         <p>Complete all 13 chapters — ${13 - CHAPTERS.filter(isComplete).length} remaining — to unlock your Reality FX Academy certificate.</p>
         <div class="cert-progress big"><span style="width:${pct}%"></span></div>
@@ -2472,7 +2674,7 @@
           <div class="cert-col right">
             <p class="cert-label">Certificate ID</p>
             <p class="cert-val">${code}</p>
-            <p class="cert-val-sub">Student Code · Phase 2</p>
+            <p class="cert-val-sub">${handoffRec() ? "Verified Student ID" : "Student Code · Phase 2"}</p>
           </div>
         </div>
         <div class="cert-sig">
@@ -2494,13 +2696,19 @@
   window.addEventListener("hashchange", route);
   document.addEventListener("DOMContentLoaded", () => {
     // sidebar nav (items without data-route are 'coming soon' placeholders)
-    document.querySelectorAll(".nav-item").forEach(n => n.addEventListener("click", () => { if (n.dataset.route) location.hash = n.dataset.route; }));
+    document.querySelectorAll(".nav-item").forEach(n => n.addEventListener("click", () => { if (n.dataset.route !== undefined) location.hash = n.dataset.route ? "#/" + n.dataset.route : "#/"; }));
     // mobile menu toggle
     const burger = document.getElementById("burger");
     if (burger) burger.addEventListener("click", () => document.querySelector(".sidebar").classList.toggle("open"));
     startSessionClock(); // live session timer begins the moment the academy opens
     checkTimeBadges();    // credit any time-in-the-game badges already banked from earlier sessions
-    save();
-    route();
+    // Handshake with System A: greet a verified student by identity (from
+    // ?sid=) when the handoff store is reachable; otherwise stay a local demo.
+    loadHandshake().then(function () {
+      save();
+      route();
+      initSessionGuard(); // single-session guard — only acts when verified
+      flagsSync();        // push any integrity flags raised since the last report
+    });
   });
 })();
