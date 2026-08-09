@@ -11,7 +11,7 @@
 
   /* ---------- State ---------- */
   function defaultState() {
-    return { name: "", xp: 0, streak: 0, lastActive: "", traderStyle: null, chapters: {}, log: [], dwell: [], secs: 0, flags: [], reportedFlags: [], styleSeen: [], distStreak: 0, distBest: 0, lastDistCh: null, chapStats: {}, justUnlocked: null,
+    return { name: "", xp: 0, streak: 0, lastActive: "", traderStyle: null, tier: null, chapters: {}, log: [], dwell: [], secs: 0, flags: [], reportedFlags: [], styleSeen: [], distStreak: 0, distBest: 0, lastDistCh: null, chapStats: {}, justUnlocked: null,
       timeBadges: [], studyDays: [], dayKey: "", daySecs: 0,
       profile: { name: "", email: "", phone: "", country: "", code: "", photo: "" },
       handoff: null };
@@ -28,9 +28,12 @@
     return (p.name && p.name.trim()) || S.name || "";
   }
   function ensureCode(p) {
-    if (p.code && /^RFX-\d{6}$/.test(p.code)) return p.code;
+    // Valid: the System A Student ID (RFX-XXXXX, 5 digits — set by the
+    // handshake) or a legacy demo code (RFX-XXXXXX, 6 digits). Anything else
+    // gets a fresh demo code, persisted so it never changes between visits.
+    if (p.code && /^RFX-\d{5,6}$/.test(p.code)) return p.code;
     p.code = "RFX-" + String(Math.floor(100000 + Math.random() * 900000));
-    save(); // persist the moment it's born — the code must never change between visits
+    save();
     return p.code;
   }
 
@@ -46,25 +49,214 @@
   function loadHandshake() {
     return new Promise(function (resolve) {
       try {
-        const sid = new URLSearchParams(location.search).get("sid");
-        if (!sid) { resolve(false); return; }
         fetch("api/handoffs", { cache: "no-store" })
           .then(r => { if (!r.ok) throw new Error("handoff store unavailable"); return r.json(); })
           .then(function (list) {
-            const rec = (list || []).find(h => h.studentId === sid);
+            const arr = list || [];
+            // Resolution order: an explicit ?sid= wins; then a handoff already
+            // applied (a refresh keeps the identity); then the profile email —
+            // so a student who opens the OS DIRECTLY still meets their identity
+            // instead of staying a nameless local demo.
+            const sid = new URLSearchParams(location.search).get("sid");
+            let rec = sid ? arr.find(h => h.studentId === sid) : null;
+            if (!rec && S.handoff && S.handoff.studentId) rec = arr.find(h => h.studentId === S.handoff.studentId) || null;
+            if (!rec) {
+              const em = String((profile().email || "")).trim().toLowerCase();
+              if (em) rec = arr.find(h => String(h.email || "").trim().toLowerCase() === em) || null;
+            }
             if (!rec) { resolve(false); return; }
+            const hadHandoff = !!S.handoff;
             const p = profile();
             if (rec.verifiedName) { p.name = rec.verifiedName; S.name = rec.verifiedName; }
             if (rec.studentId) p.code = rec.studentId;
             if (rec.email) p.email = rec.email;
             S.handoff = { studentId: rec.studentId, studentCode: rec.studentCode || "", status: rec.status || "ACTIVE", printTrust: rec.printTrust || "standard", receivedAt: rec.receivedAt || "" };
             save();
-            toast("Welcome, " + (rec.verifiedName || rec.studentId) + " — identity verified by Reality FX registration", "rank");
+            if (!hadHandoff) toast("Welcome, " + (rec.verifiedName || rec.studentId) + " — identity verified by Reality FX registration", "rank");
             resolve(true);
           })
           .catch(function () { resolve(false); });
       } catch (e) { resolve(false); }
     });
+  }
+
+  /* ---------- The return trip: OS → System A ----------
+     Verified students zip back to their RFX Account (identity, wallet,
+     invoice) and the Reception (the front doors + Sarrah). Resolution:
+     1. A captured academy base (the origin this page arrived from, e.g. the
+        member panel in the demo) wins when present;
+     2. Otherwise the same-site relative path — in production the OS lives
+        at /os/ beside System A, so "../member.html" is exactly right.
+     The base is captured on arrival so a refresh never loses the bridge. */
+  const ACADEMY_KEY = "rfx_academy_base";
+  function academyBase() {
+    try {
+      const saved = localStorage.getItem(ACADEMY_KEY);
+      if (saved) return saved;
+    } catch (e) { /* storage unavailable */ }
+    return location.pathname.indexOf("/os/") >= 0 ? "../" : "";
+  }
+  function academyUrl(path) {
+    const b = academyBase();
+    return (b ? b.replace(/\/+$/, "") + "/" : "") + path;
+  }
+  function captureAcademyBase() {
+    try {
+      const r = document.referrer;
+      if (!r) return;
+      const u = new URL(r);
+      if (u.origin === location.origin) return; // same-site — relative path already correct
+      if (!/\/(member|index|wallet|srm|staff|register)\.html(\?|#|$)/.test(u.pathname)) return;
+      if (localStorage.getItem(ACADEMY_KEY)) return;
+      localStorage.setItem(ACADEMY_KEY, u.origin + "/");
+    } catch (e) { /* referrer unavailable */ }
+  }
+  function wireAcademyLinks() {
+    if (!handoffRec()) return;
+    document.querySelectorAll(".academy-link").forEach(function (a) {
+      const kind = a.getAttribute("data-academy");
+      a.setAttribute("href", academyUrl(kind === "reception" ? "index.html" : "member.html"));
+      a.hidden = false;
+    });
+    // the profile page's gold portal button is rendered with the href inline —
+    // re-point it whenever the base is (re)resolved so it never goes stale
+    const portal = document.querySelector(".profile-portal-btn");
+    if (portal) portal.setAttribute("href", academyUrl("member.html"));
+    const gap = document.querySelector(".nav-gap");
+    if (gap) gap.hidden = false;
+    const ah = document.querySelector(".academy-health");
+    if (ah) ah.hidden = false;
+  }
+
+  /* ---------- Academy discovery (demo resilience) ----------
+     In production the OS lives at /os/ beside System A, so "../member.html"
+     is exactly right and no discovery is needed. In the demo the OS and the
+     System A servers live on different ports, so a student who opens the OS
+     directly (bookmark, preview, welcome email) has no captured academy base
+     — the "../" fallback then points at whatever server hosts the OS, which
+     returns {"error":"not found"} for member.html. When the health check
+     finds the primary resolution wrong, discovery probes the demo System A
+     fork servers (CORS-open /api/state), adopts the first that both serves
+     the app and holds the student's record (or any System A app if none
+     hold it), saves it as the academy base, and re-wires the return links. */
+  const DEMO_ACADEMY_PORTS = [8124, 8123];
+  function probeAcademy(origin) {
+    return fetch(origin + "/api/state", { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error("down"); return r.json(); })
+      .then(function (st) { return (st && Array.isArray(st.enrollments)) ? st : null; })
+      .catch(function () { return null; });
+  }
+  function discoverAcademy() {
+    const sid = handoffRec() && handoffRec().studentId;
+    const candidates = [];
+    try { candidates.push(new URL(academyUrl("member.html"), location.href).origin); } catch (e) {}
+    DEMO_ACADEMY_PORTS.forEach(function (p) { candidates.push("http://127.0.0.1:" + p); });
+    const seen = {};
+    const unique = candidates.filter(function (o) { return o && !seen[o] && (seen[o] = 1); });
+    return Promise.all(unique.map(function (o) {
+      return probeAcademy(o).then(function (st) {
+        if (!st) return null;
+        const known = sid && st.enrollments.some(function (e) {
+          return e && (e.studentId === sid || e.studentCode === sid);
+        });
+        return { origin: o, known: !!known };
+      });
+    })).then(function (hits) {
+      const live = hits.find(function (h) { return h && h.known; });
+      const any = hits.find(function (h) { return h && !h.known; });
+      const chosen = live || any;
+      if (chosen) {
+        try { localStorage.setItem(ACADEMY_KEY, chosen.origin + "/"); } catch (e) {}
+        wireAcademyLinks();
+        setAcademyHealth("live", "Academy link · live — your record is held");
+        return chosen.origin;
+      }
+      return null;
+    });
+  }
+
+  /* ---------- Academy link health (stale-server check) ----------
+     The return trip is only as good as the server it points at. In the demo
+     there are multiple System A servers (one per state file), and a link can
+     point at a copy that doesn't hold this student — or at a server that
+     went down. This check pings BOTH the OS's own handoff server and the
+     academy server, then verifies the student's record actually lives there:
+       live        — academy server reachable AND holds this student's record
+       stale       — server reachable but holds an OLDER copy (record missing)
+       unreachable — server down; links stay but may not respond
+       os-down     — this OS's handoff server is unreachable (greeting/flags lag)
+     The status line lives under the return-trip links; it re-checks on boot,
+     on tab focus, and every 90s while the OS is open. */
+  let ahTimer = null, ahVerdict = null; // ahVerdict: last definitive verdict — never downgraded by a slow re-check
+  function setAcademyHealth(state, text) {
+    const el = document.querySelector(".academy-health");
+    if (el) {
+      if (state) ahVerdict = { state: state, text: text };
+      el.className = "academy-health" + (state ? " ah-" + state : "");
+      el.querySelector(".ah-text").textContent = text;
+    }
+    // live verdict → any open System status card re-renders itself
+    try { window.dispatchEvent(new CustomEvent("rfx:academy-health", { detail: ahVerdict })); } catch (e) {}
+  }
+  function academyHealthCheck() {
+    const sid = handoffRec() && handoffRec().studentId;
+    if (!sid) return;
+    const ah = document.querySelector(".academy-health");
+    if (!ah || ah.hidden) return;
+    // A re-check never blanks a definitive verdict (slow-but-alive servers
+    // stay "live"/"stale" instead of flashing "unreachable").
+    if (!ahVerdict) setAcademyHealth("", "Checking academy link…");
+    const to = setTimeout(function () {
+      // No verdict yet after 15s (the Perl demo server can be slow on a big
+      // state file) — only then call the OS store unhealthy, and never
+      // overwrite a definitive verdict that arrived meanwhile.
+      if (!ahVerdict) setAcademyHealth("os-down", "OS server unreachable — greeting & flags may lag");
+    }, 15000);
+    // 1) the OS's own handoff server
+    fetch("api/handoffs", { cache: "no-store" })
+      .then(r => { if (!r.ok) throw new Error("os store down"); return r.json(); })
+      .catch(function () {
+        clearTimeout(to);
+        if (!ahVerdict) setAcademyHealth("os-down", "OS server unreachable — greeting & flags may lag");
+        throw new Error("os store down");
+      })
+      .then(function () {
+        // 2) the academy server the return links point at
+        let url;
+        try { url = new URL(academyUrl("api/state"), location.href).href; } catch (e) { return; }
+        fetch(url, { cache: "no-store" })
+          .then(function (r) { if (!r.ok) throw new Error("academy down"); return r.json(); })
+          .then(function (st) {
+            clearTimeout(to);
+            const list = (st && st.enrollments) || [];
+            const known = list.some(function (e) {
+              return e && (e.studentId === sid || e.studentCode === sid);
+            });
+            if (known) {
+              setAcademyHealth("live", "Academy link · live — your record is held");
+            } else {
+              setAcademyHealth("stale", "Older academy copy — your record isn't here; re-enter from your member panel");
+            }
+          })
+          .catch(function () {
+            clearTimeout(to);
+            // A REAL failure flips the beacon to down — even after a definitive
+            // verdict (the 15s os-down timeout above stays protected by
+            // !ahVerdict so a slow-but-alive first check never flashes). The
+            // next successful check re-flips it to live: the beacon recovers.
+            discoverAcademy().then(function (origin) {
+              if (!origin) setAcademyHealth("unreachable", "Academy server down right now — we're aware & fixing it. Your course is unaffected.");
+            });
+          });
+      })
+      .catch(function () { /* handled above */ });
+  }
+  function startAcademyHealth() {
+    if (!handoffRec()) return;
+    academyHealthCheck();
+    clearInterval(ahTimer);
+    ahTimer = setInterval(academyHealthCheck, 90000);
+    window.addEventListener("focus", academyHealthCheck);
   }
 
   /* ---------- Fair Play flags → academy server rail ----------
@@ -209,9 +401,7 @@
   let S = load();
   function save() { localStorage.setItem(KEY, JSON.stringify(S)); }
 
-  function chState(id) {
-    if (!S.chapters[id]) S.chapters[id] = { viewed: [], quizBest: null, passed: false, done: false, poll: null, earned: [], retries: 0, failedAt: null, firstFailAt: null, badges: [] };
-    const st = S.chapters[id];
+  function backfillSt(st) {
     if (!Array.isArray(st.viewed)) st.viewed = [];
     if (!Array.isArray(st.earned)) st.earned = [];
     if (!Array.isArray(st.badges)) st.badges = [];
@@ -219,18 +409,34 @@
     if (st.failedAt === undefined) st.failedAt = null;
     if (st.firstFailAt === undefined) st.firstFailAt = null;
     if (typeof st.reflect !== "string") st.reflect = "";  // pause-point reflection notes
+    if (typeof st.reviewSecs !== "number") st.reviewSecs = 0;
+    if (st.reviewed === undefined) st.reviewed = false;
+    if (st.tipSeen === undefined) st.tipSeen = false;
+    return st;
+  }
+  // Progress is tracked per tier: the standard record is the base chapter record
+  // (back-compatible), and challenging/elite live as sub-records. The ACTIVE tier's
+  // record drives the player; cross-tier completion (chPassed) drives the journey.
+  function chState(id) {
+    if (!S.chapters[id]) S.chapters[id] = {};
+    const base = S.chapters[id];
+    const k = tierKey();
+    const rec = (k !== "standard") ? (base[k] || (base[k] = {})) : base;
+    backfillSt(rec);
     // migration: chapter layouts evolve (slide renumbering) — never let stale slide
     // numbers from an older layout inflate progress or drop a student into the quiz.
+    // Uses the ACTIVE deck so tier decks migrate against their own layout.
     const chDef = CHAPTERS.find(x => x.id === Number(id));
-    if (chDef && chDef.quiz && chDef.quizSlides && st.quizBest === null) {
-      const firstQuiz = chDef.quizSlides[0];
-      st.viewed = st.viewed.filter(v => v >= 1 && v < firstQuiz);
+    const deck = tierDeck(chDef) || chDef;
+    if (deck && deck.quiz && deck.quizSlides && rec.quizBest === null) {
+      const firstQuiz = deck.quizSlides[0];
+      rec.viewed = rec.viewed.filter(v => v >= 1 && v < firstQuiz);
     }
     // self-heal: a passed quiz proves the whole chapter was completed, so credit
     // every slide. Fixes older saves where the pre-quiz slides were viewed but the
     // quiz slides were never recorded — the course % would otherwise stay at 0%.
-    if (chDef && st.passed && st.viewed.length < chDef.slides) {
-      st.viewed = Array.from({ length: chDef.slides }, (_, i) => i + 1);
+    if (deck && rec.passed && rec.viewed.length < deck.slides) {
+      rec.viewed = Array.from({ length: deck.slides }, (_, i) => i + 1);
       S.selfHealed = true;
     }
     if (S.selfHealed) {
@@ -238,10 +444,7 @@
       save();
       setTimeout(() => toast("Progress synced — a completed chapter's slides were credited. Your course % is now accurate.", "rank"), 600);
     }
-    if (typeof st.reviewSecs !== "number") st.reviewSecs = 0;
-    if (st.reviewed === undefined) st.reviewed = false;
-    if (st.tipSeen === undefined) st.tipSeen = false;
-    return st;
+    return rec;
   }
 
   /* ---------- Session time tracking (auto-starts on open, pauses when hidden) ---------- */
@@ -274,7 +477,7 @@
     if (S.timeBadges.includes(key)) return;
     S.timeBadges.push(key);
     const b = BADGES[key];
-    if (b) { toast("Badge earned: " + b.icon + " " + b.name, "rank"); addXp(40, "time-" + key); }
+    if (b) { toast("Badge earned: " + b.name, "rank"); addXp(40, "time-" + key); }
   }
   function checkTimeBadges() {
     TIME_BADGES.forEach(t => { if ((S.secs || 0) >= t.secs) awardTimeBadge(t.key); });
@@ -327,10 +530,12 @@
     return Math.floor(mins / 60) + "h " + (mins % 60 ? mins % 60 + "m" : "");
   }
   function isComplete(ch) {
+    // A chapter is done when ANY tier record passed it — an upgraded student
+    // keeps every earlier chapter's completion on the journey.
+    if (ch.quiz) return chPassed(ch.id);
+    const deck = tierDeck(ch) || ch;
     const st = chState(ch.id);
-    const allViewed = st.viewed.length >= ch.slides;
-    if (ch.quiz) return allViewed && st.passed;
-    return allViewed; // quiz bank pending → slide completion unlocks
+    return st.viewed.length >= deck.slides; // quiz bank pending → slide completion unlocks
   }
   function isUnlocked(ch) {
     if (ch.id === 1) return true;
@@ -347,7 +552,7 @@
     S.xp += n;
     const after = rankFor(S.xp);
     save();
-    if (after !== before) toast("Rank up! You are now " + after.icon + " " + after.name, "rank");
+    if (after !== before) toast("Rank up! You are now " + after.name, "rank");
   }
 
   /* ---------- Ring gauges (mini insight circles) ---------- */
@@ -407,7 +612,24 @@
     note:   ICON('<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'),
     target: ICON('<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>'),
     lockOpen: ICON('<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>'),
-    diamond: ICON('<path d="M12 2l4.5 4.5L12 22 7.5 6.5 12 2z"/><path d="M2 6.5h20M7.5 6.5L12 22l4.5-15.5"/>')
+    diamond: ICON('<path d="M12 2l4.5 4.5L12 22 7.5 6.5 12 2z"/><path d="M2 6.5h20M7.5 6.5L12 22l4.5-15.5"/>'),
+    shield:  ICON('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'),
+    medal:   ICON('<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>'),
+    crown:   ICON('<path d="M2 18h20M4 17l-1-9 6 4 3-6 3 6 6-4-1 9H4z"/>'),
+    institution: ICON('<line x1="3" x2="21" y1="22" y2="22"/><line x1="6" x2="6" y1="18" y2="11"/><line x1="10" x2="10" y1="18" y2="11"/><line x1="14" x2="14" y1="18" y2="11"/><line x1="18" x2="18" y1="18" y2="11"/><polygon points="12 2 20 7 4 7"/>'),
+    camera:  ICON('<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'),
+    video:   ICON('<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/>'),
+    mic:     ICON('<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>'),
+    users:   ICON('<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'),
+    trendDown: ICON('<polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/>'),
+    flag:    ICON('<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/>'),
+    hourglass: ICON('<path d="M5 22h14M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>'),
+    mountain: ICON('<path d="M8 3l4 8 5-5 5 15H2L8 3z"/>'),
+    moon:    ICON('<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>'),
+    galaxy:  ICON('<circle cx="12" cy="12" r="9"/><path d="M12 7v10M7 12h10"/>'),
+    sword:   ICON('<polyline points="14.5 17.5 3 6 3 3 6 3 17.5 14.5"/><line x1="13" y1="19" x2="19" y2="13"/><line x1="16" y1="16" x2="20" y2="20"/><line x1="19" y1="21" x2="21" y2="19"/>'),
+    heart:   ICON('<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>'),
+    seed:    ICON('<path d="M12 22V12"/><path d="M12 12C12 7 8 5 4 5c0 4 3 7 8 7z"/><path d="M12 12c0-5 4-7 8-7 0 4-3 7-8 7z"/>')
   };
   const NAV_ICONS = {
     profile: "user", "": "home", map: "map", progress: "chart", mod: "shield",
@@ -550,7 +772,10 @@
     return CHAPTERS.map(ch => {
       const agg = (S.chapStats || {})[ch.id];
       const st = chState(ch.id);
-      const best = st.quizBest != null ? st.quizBest : 0;
+      // In-lane truth when the lane has been attempted; otherwise fall back to the
+      // cross-tier best so a fresh Elite/Challenging record is never read as a failure
+      // the student never made.
+      const best = st.quizBest != null ? st.quizBest : chBest(ch.id);
       let score = 0, reason = "";
       if (ch.quiz) {
         if (best < 85) {
@@ -590,21 +815,62 @@
   /* ---------- Retake policy (Fair Play) ---------- */
   const RETRY_WINDOW_MS = 2 * 60 * 60 * 1000; // 2h reflection period after a fail
   const MAX_RETRIES = 3;                        // retake tokens per chapter
+  /* ---------- Difficulty tiers ----------
+     One choice, made before the course begins, locked until a deliberate
+     door opens. The tiers change what is demanded of the student — the
+     questions, the insider depth, the recognition — not the base course.
+     Standard is a complete education; Challenging adds application and
+     insider notes; Hard is the elite lane (real trading math, cross-chapter
+     scenarios, the institutional layer). Graduates unlock every tier free. */
+  const TIERS = {
+    standard:    { name: "Standard",    tag: "The full course — complete and trade-ready", color: "#E6C565" },
+    challenging: { name: "Challenging", tag: "Applied questions, insider notes, deeper thinking", color: "#9fe3bd" },
+    elite:       { name: "Elite",       tag: "A different course — advanced concepts, real trading math, the institutional layer", color: "#e8a33d" }
+  };
+  const TIER_ORDER = ["standard", "challenging", "elite"];
+  function tierKey() { return S.tier && TIERS[S.tier] ? S.tier : "standard"; }
+  function tierName() { return TIERS[tierKey()].name; }
+  function tierTag() { return TIERS[tierKey()].tag; }
+  // The active tier's parallel deck for a chapter (challenging/elite tracks live
+  // inside the chapter data). Returns null on standard or while a tier's content
+  // is still being forged — the player then reads the core material.
+  function tierDeck(ch) {
+    const k = tierKey();
+    if (k !== "standard" && ch && ch[k] && Array.isArray(ch[k].native) && ch[k].native.length) return ch[k];
+    return null;
+  }
+  // Passed in ANY tier — an upgraded student keeps their earlier progress
+  // visible on the journey even though the active tier record is fresh.
+  function chPassed(id) {
+    const base = S.chapters[id] || {};
+    if (base.passed) return true;
+    if (base.challenging && base.challenging.passed) return true;
+    if (base.elite && base.elite.passed) return true;
+    return false;
+  }
+  function chBest(id) {
+    const base = S.chapters[id] || {};
+    const vals = [base, base.challenging, base.elite].map(r => (r && r.quizBest != null) ? r.quizBest : 0);
+    return Math.max.apply(null, vals);
+  }
+
   const BADGES = {
-    lion:       { name: "Heart of a Lion",    icon: "🦁", desc: "Failed a chapter, came back, and passed it. That's persistence — the trader's hidden edge." },
-    distinction:{ name: "Distinction Hunter", icon: "🏆", desc: "Retook a chapter and pushed past 90% when a pass wasn't enough. Excellence is a habit." },
-    honours:    { name: "Honours",            icon: "🎖️", desc: "Scored 80% or higher on a chapter quiz. Consistency compounds — this is how institutions are built." },
-    first:      { name: "First Blood",        icon: "⚔️", desc: "Passed your very first chapter quiz. Every master started here." },
-    perfect:    { name: "Flawless",           icon: "💎", desc: "Scored 100% on a chapter quiz. Clean execution, clean thinking." },
+    lion:       { name: "Heart of a Lion",    ic: "heart", desc: "Failed a chapter, came back, and passed it. That's persistence — the trader's hidden edge." },
+    distinction:{ name: "Distinction Hunter", ic: "trophy", desc: "Retook a chapter and pushed past 90% when a pass wasn't enough. Excellence is a habit." },
+    honours:    { name: "Honours",            ic: "medal", desc: "Scored 80% or higher on a chapter quiz. Consistency compounds — this is how institutions are built." },
+    first:      { name: "First Blood",        ic: "sword", desc: "Passed your very first chapter quiz. Every master started here." },
+    perfect:    { name: "Flawless",           ic: "diamond", desc: "Scored 100% on a chapter quiz. Clean execution, clean thinking." },
     // Time-in-the-game achievements — the trader who trains when nobody's
     // watching. Tracked from the live session clock.
-    hour1:      { name: "First Hour",         icon: "⏱️", desc: "Logged your first hour inside the Academy. The path begins with showing up." },
-    hour3:      { name: "Deep Session",       icon: "🔥", desc: "Stayed focused for 3 hours of study. That's a training block, not a visit." },
-    hour10:     { name: "Ten Hours of Focus", icon: "💫", desc: "10 hours invested. Compound interest on your own brain." },
-    hour50:     { name: "Fifty-Hour Grind",   icon: "🏔️", desc: "50 hours in the game. Most traders never get this far — you're built different." },
-    hour100:    { name: "Century of Study",   icon: "🌌", desc: "100 hours of study. The market can't give this back — only you could." },
-    study3:     { name: "The Unseen Grind",   icon: "🌙", desc: "3 consecutive days of study — the habit that quietly makes professionals." }
+    hour1:      { name: "First Hour",         ic: "hourglass", desc: "Logged your first hour inside the Academy. The path begins with showing up." },
+    hour3:      { name: "Deep Session",       ic: "flame", desc: "Stayed focused for 3 hours of study. That's a training block, not a visit." },
+    hour10:     { name: "Ten Hours of Focus", ic: "sparkle", desc: "10 hours invested. Compound interest on your own brain." },
+    hour50:     { name: "Fifty-Hour Grind",   ic: "mountain", desc: "50 hours in the game. Most traders never get this far — you're built different." },
+    hour100:    { name: "Century of Study",   ic: "galaxy", desc: "100 hours of study. The market can't give this back — only you could." },
+    study3:     { name: "The Unseen Grind",   ic: "moon", desc: "3 consecutive days of study — the habit that quietly makes professionals." }
   };
+  // Stroke icon for a badge key (SVG from the ICONS set; safe fallback "").
+  const badgeIc = key => { const b = BADGES[key]; return b ? (ICONS[b.ic] || b.icon || "") : ""; };
   // Milestones (in seconds) for the time-in-the-game badges
   const TIME_BADGES = [
     { key: "hour1",   secs: 3600 },
@@ -636,9 +902,40 @@
      doesn't read 58 slides, answer 23 questions, and review the misses in the
      same 95 minutes. Each question carries ~1.5 min of read/answer/review,
      and every REAL retake attempt re-pays that cost (it's on the log). */
-  const Q_MIN = 1.5; // minutes per quiz question (read + answer + review explanation)
-  function quizMins(ch) { return ch.quiz ? Math.round((ch.quiz.length || 0) * Q_MIN) : 0; }
-  function chapterTotalMins(ch) { return (ch.mins || 0) + quizMins(ch); }
+  /* ---------- Honest duration model ----------
+     The old estimate was a hand-set constant per chapter plus a flat 1.5
+     minutes per question. Now the course times itself the way a sharp human
+     actually reads: slides are timed by their real word count at ~160 wpm
+     with a comprehension beat, and quiz questions by their real length with
+     an answer + explanation-review floor. The numbers on the journey and the
+     dashboard are therefore defensible — and they grow honestly as content grows. */
+  function slideReadMins(nv) {
+    if (!nv) return 0.6;
+    let words = 0;
+    const count = s => { if (s) words += String(s).split(/\s+/).length; };
+    count(nv.eyebrow); count(nv.title); count(nv.lead); count(nv.sub);
+    (nv.body || []).forEach(count); (nv.bullets || []).forEach(count);
+    count(nv.example); count(nv.callout); count(nv.insight);
+    if (nv.styles) Object.keys(nv.styles).forEach(k => count(nv.styles[k]));
+    // Careful study pace for dense trading material: ~130 wpm + a real
+    // comprehension beat per slide (figures, gold bullets, insights, notes).
+    return Math.max(0.7, words / 130 + 0.6);
+  }
+  function questionMins(q) {
+    if (!q) return 1.2;
+    const chars = (q.q || "").length;
+    return Math.max(1, Math.min(4.5, (chars / 7 + 45) / 60)); // read Q + options, decide, review the gold explanation
+  }
+  function quizMins(ch) {
+    const deck = tierDeck(ch) || ch;
+    if (!deck.quiz) return 0;
+    return Math.round(deck.quiz.reduce((a, q) => a + questionMins(q), 0));
+  }
+  function readingMins(ch) {
+    const deck = tierDeck(ch) || ch;
+    return Math.round((deck.native || []).reduce((a, nv) => a + slideReadMins(nv), 0));
+  }
+  function chapterTotalMins(ch) { return readingMins(ch) + quizMins(ch); }
   function retakeMins() {
     // retakes are real time too — each retry re-pays the quiz's question minutes.
     // Only unfinished chapters count: once a chapter is fully done, its quiz time
@@ -694,6 +991,7 @@
   function route() {
     document.onkeydown = null; // keyboard nav only lives inside the lesson player
     clearInterval(session.revTicker); // stop revision countdown when leaving the lesson
+    if (window.RFXMentor) window.RFXMentor.destroy(); // leave the chat cleanly (stops typing timers)
     updateSidebar();
     updateCertNav();
     const h = location.hash || "#/";
@@ -713,8 +1011,40 @@
     else if (view === "review") renderLesson(viewEl, parseInt(parts[1], 10), null, true); // read-only revision mode
     else if (view === "certificate") renderCertificate(viewEl);
     else if (view === "vault") renderVault(viewEl);
+    else if (view === "mentor") {
+      if (window.RFXMentor) window.RFXMentor.mount(viewEl);
+      else viewEl.innerHTML = '<div class="panel"><h3 class="gold-serif">The Mentor</h3><p class="page-sub">The trading twin isn\'t loaded in this build yet.</p></div>';
+    }
     else renderDashboard(viewEl);
     window.scrollTo(0, 0);
+  }
+
+  /* Quick-resume strip — "you left off here, pick it back up". Reads the
+     last slide the student actually sat in and deep-links straight back to
+     it. One click, no hunting. */
+  function resumeStrip() {
+    const ll = S.lastLesson;
+    if (!ll || !ll.ch) return "";
+    const ch = CHAPTERS.find(c => c.id === ll.ch);
+    if (!ch || isComplete(ch) || !isUnlocked(ch)) return "";
+    const slide = Math.min(Math.max(1, ll.slide || 1), ch.slides);
+    const pct = Math.round(slide / ch.slides * 100);
+    const when = ll.ts ? fmtRel(ll.ts) : "";
+    return `<div class="resume-strip">
+      <div class="resume-ic">${ICONS.clock}</div>
+      <div class="resume-txt">
+        <p class="resume-l">Quick resume${when ? " · " + esc(when) : ""}</p>
+        <p class="resume-v"><b>${esc(ch.title)}</b> — slide ${slide} of ${ch.slides} <span class="resume-bar"><i style="width:${pct}%"></i></span></p>
+      </div>
+      <button class="btn-gold resume-go" data-go="${ch.id}" data-slide="${slide}">Resume →</button>
+    </div>`;
+  }
+  function fmtRel(ts) {
+    const s = Math.max(0, Math.round((Date.now() - (ts || 0)) / 1000));
+    if (s < 60) return "just now";
+    if (s < 3600) return Math.floor(s / 60) + "m ago";
+    if (s < 86400) return Math.floor(s / 3600) + "h ago";
+    return Math.floor(s / 86400) + "d ago";
   }
 
   /* ============================================================
@@ -726,6 +1056,11 @@
     const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     const pct = progressPct();
     const rank = rankFor(S.xp);
+    // Time ring: share of estimated study time already consumed (mirrors the
+    // course ring; the label shows what's left). Platinum, not gold — the
+    // course owns gold, time wears silver.
+    const timeTotal = courseMins() + retakeMins();
+    const timePct = timeTotal > 0 ? Math.max(0, Math.min(100, Math.round(doneMins() / timeTotal * 100))) : 0;
     const nr = nextRank(S.xp);
     const cont = nextLesson();
     const recs = cont ? [] : recommendChapters();
@@ -741,34 +1076,55 @@
            </div>
            <p class="dash-cta-sub">Every chapter complete. Collect what you earned — and keep sharpening while you're here.</p>`;
 
+    // accuracy ring — correct answers across every logged attempt
+    let accN = 0, accW = 0;
+    Object.values(S.chapStats || {}).forEach(a => { accN += a.n || 0; accW += a.wrong || 0; });
+    const accPct = accN ? Math.round((accN - accW) / accN * 100) : 0;
+
     const hoff = handoffRec();
     root.appendChild(el("div", "dash-hero", `
-      <div class="sess-chip" title="Live session timer — auto-starts when you open the academy, stops when you leave">
-        <span class="sess-dot"></span>
-        <div><p class="sess-lbl">Live session</p><p class="sess-time" id="sessTimer">${fmtClock(S.secs || 0)}</p></div>
-      </div>
       <div class="dash-hero-inner">
         <div>
           <p class="eyebrow">Reality FX OS · ${esc(today)}</p>
           <h1>Welcome back, <span class="gold-serif">${esc(name)}</span></h1>
-          ${hoff ? `<p class="verified-pill">${esc(hoff.studentId)} · ${esc(hoff.status || "ACTIVE")} · identity verified by Reality FX registration</p>` : ""}
           <p class="dash-sub">“${esc(QUOTE)}”</p>
           <div class="dash-cta">
             ${cta}
           </div>
         </div>
-        <div class="ring-side">
-          <div class="ring-wrap">
-            <svg class="ring" viewBox="0 0 120 120">
-              <defs><filter id="courseRingGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
-              <circle class="ring-bg" cx="60" cy="60" r="52"/>
-              <circle class="ring-fg" cx="60" cy="60" r="52" style="stroke-dashoffset:${326.7 * (1 - pct / 100)}" filter="url(#courseRingGlow)"/>
-            </svg>
-            <div class="ring-label"><strong>${pct}%</strong><span>course</span></div>
+        <div class="hero-right">
+          <div class="hero-top">
+            ${hoff ? `<span class="id-chip" title="Your identity — verified by Reality FX registration">ID ${esc(hoff.studentId)} <b class="id-ver">(Verified!)</b></span>` : ""}
+            <div class="sess-chip" title="Live session timer — auto-starts when you open the academy, stops when you leave">
+              <span class="sess-dot"></span>
+              <div><p class="sess-lbl">Live session</p><p class="sess-time" id="sessTimer">${fmtClock(S.secs || 0)}</p></div>
+            </div>
           </div>
-          <div class="hours-chip" title="Estimated study time remaining — slides read and quizzes passed reduce it">
-            <span class="hc-ic">${ICONS.clock}</span>
-            <div><p class="hc-v">≈ ${hoursLeft()}h</p><p class="hc-l">left in course</p></div>
+          <div class="ring-side">
+            <div class="ring-wrap">
+              <svg class="ring" viewBox="0 0 120 120">
+                <defs><filter id="courseRingGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <circle class="ring-bg" cx="60" cy="60" r="52"/>
+                <circle class="ring-fg" cx="60" cy="60" r="52" style="stroke-dashoffset:${326.7 * (1 - pct / 100)}" filter="url(#courseRingGlow)"/>
+              </svg>
+              <div class="ring-label"><strong>${pct}%</strong><span>course</span></div>
+            </div>
+            <div class="ring-wrap time-ring-wrap" title="Estimated study time remaining — slides read and quizzes passed reduce it">
+              <svg class="ring" viewBox="0 0 120 120">
+                <defs><filter id="timeRingGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <circle class="ring-bg" cx="60" cy="60" r="52"/>
+                <circle class="time-ring-fg" cx="60" cy="60" r="52" style="stroke-dashoffset:${326.7 * (1 - timePct / 100)}" filter="url(#timeRingGlow)"/>
+              </svg>
+              <div class="ring-label time-ring-label"><strong>≈ ${hoursLeft()}h</strong><span>left</span></div>
+            </div>
+            <div class="ring-wrap acc-ring-wrap" title="Quiz accuracy — correct answers across every logged attempt">
+              <svg class="ring" viewBox="0 0 120 120">
+                <defs><filter id="accRingGlow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+                <circle class="ring-bg" cx="60" cy="60" r="52"/>
+                <circle class="acc-ring-fg" cx="60" cy="60" r="52" style="stroke-dashoffset:${326.7 * (1 - accPct / 100)}" filter="url(#accRingGlow)"/>
+              </svg>
+              <div class="ring-label acc-ring-label"><strong>${accPct}%</strong><span>accuracy</span></div>
+            </div>
           </div>
         </div>
       </div>
@@ -777,6 +1133,13 @@
       const t = go.dataset.go;
       location.hash = t === "cert" ? "#/certificate" : t === "progress" ? "#/progress" : "#/lesson/" + t;
     }));
+    const rs = resumeStrip();
+    if (rs) {
+      root.insertAdjacentHTML("beforeend", rs);
+      root.querySelectorAll(".resume-go").forEach(go => go.addEventListener("click", () => {
+        location.hash = "#/lesson/" + go.dataset.go + "/" + go.dataset.slide;
+      }));
+    }
 
     // Trader identity card (adaptive learning)
     root.appendChild(styleCard());
@@ -801,9 +1164,9 @@
     const avgGrade = gradedChs.length
       ? Math.round(gradedChs.reduce((a, c) => a + chState(c.id).lastScore, 0) / gradedChs.length)
       : null;
-    let accN = 0, accW = 0;
-    Object.values(S.chapStats || {}).forEach(a => { accN += a.n || 0; accW += a.wrong || 0; });
-    const accuracy = accN ? Math.round((accN - accW) / accN * 100) : null;
+    let iAccN = 0, iAccW = 0;
+    Object.values(S.chapStats || {}).forEach(a => { iAccN += a.n || 0; iAccW += a.wrong || 0; });
+    const accuracy = iAccN ? Math.round((iAccN - iAccW) / iAccN * 100) : null;
     const logMs = (S.log || []).filter(l => l.ms > 1400); // exclude automated-speed flags
     const avgResp = logMs.length ? Math.round(logMs.reduce((a, r) => a + r.ms, 0) / logMs.length) : null;
     // Pace ring fills by the SHARE of answers under a healthy 30s — higher fill
@@ -824,47 +1187,93 @@
       </div>
       <div class="intel-rings">
         <div class="intel-ring-cell">${ringGauge(avgGrade != null ? avgGrade : 0, avgGrade != null ? ringGold : ringEmpty, "avg grade", avgGrade != null ? avgGrade + "%" : "—", gradedChs.length ? gradedChs.length + " quizzes graded" : "Pass a quiz to light this up")}</div>
-        <div class="intel-ring-cell">${ringGauge(accuracy != null ? accuracy : 0, accuracy != null ? ringGold : ringEmpty, "accuracy", accuracy != null ? accuracy + "%" : "—", accN ? accN + " answers logged" : "Answers appear as you quiz")}</div>
+        <div class="intel-ring-cell">${ringGauge(accuracy != null ? accuracy : 0, accuracy != null ? ringGold : ringEmpty, "accuracy", accuracy != null ? accuracy + "%" : "—", iAccN ? iAccN + " answers logged" : "Answers appear as you quiz")}</div>
         <div class="intel-ring-cell">${ringGauge(paceShare != null ? paceShare : 0, paceShare != null ? ringGold : ringEmpty, "quick answers", paceShare != null ? paceShare + "%" : "—", paceShare != null ? (paceShare >= 70 ? "Most answers in under 30s" : paceShare >= 40 ? "A steady, careful pace" : "Deeply deliberate — the review matters") : "Timed from your first quiz")}</div>
       </div>`;
     const intelGo = intel.querySelector("[data-go='progress']");
     if (intelGo) intelGo.addEventListener("click", () => location.hash = "#/progress");
     root.appendChild(intel);
 
+    // System status · Academy heartbeat — the OS's own intel flex. Honest
+    // about every part of itself: the course core is device-native, so the
+    // Journey never closes — the academy link only carries identity, wallet
+    // and flags, and when it's down the student hears we know, not silence.
+    const sysCard = el("div", "panel sys-panel");
+    sysCard.innerHTML = `
+      <div class="intel-head">
+        <div>
+          <h3 class="panel-title gold-serif">System status · Academy heartbeat</h3>
+          <p class="panel-sub">The machine that runs your education — honest about every part of itself, always.</p>
+        </div>
+        <span class="sys-pulse"><span class="sys-pulse-dot"></span>monitoring</span>
+      </div>
+      <div class="sys-grid">
+        <div class="sys-row"><div class="sys-name">Course core — ${CHAPTERS.length} chapters · ${CHAPTERS.reduce((a, c) => a + c.slides, 0)} slides</div><span class="sys-state up">Always on</span><p class="sys-desc">Lessons, quizzes and notes live on your device — the Journey never closes.</p></div>
+        <div class="sys-row"><div class="sys-name">AI Mentor</div><span class="sys-state up">Always on</span><p class="sys-desc">Your trading twin answers from the same device — no link required.</p></div>
+        <div class="sys-row"><div class="sys-name">Laboratory</div><span class="sys-state up">Always on</span><p class="sys-desc">Circuit breakers and drawdown sims run right here, rain or storm.</p></div>
+        <div class="sys-row"><div class="sys-name">Progress &amp; badges</div><span class="sys-state up">On your device</span><p class="sys-desc">Saved the moment you answer — synced to the academy when the link returns.</p></div>
+        <div class="sys-row"><div class="sys-name">Academy link — identity · wallet · flags</div><span class="sys-state check" id="sysAcademyState">Checking…</span><p class="sys-desc">The only part that talks to the server — it carries your records, not your learning.</p></div>
+      </div>
+      <div class="sys-banner" id="sysBanner">Come rain or storm — your Journey never closes. Lessons, quizzes, notes and badges are device-native; the academy link only carries identity, wallet and flags.</div>`;
+    function fillSys(ev) {
+      const st = sysCard.querySelector("#sysAcademyState");
+      const bn = sysCard.querySelector("#sysBanner");
+      if (!st || !bn) return;
+      const v = (ev && ev.detail) || ahVerdict;
+      const map = {
+        live: ["up", "Live", "Academy server reachable — your identity, wallet and records are connected."],
+        stale: ["warn", "Stale copy", "The server you're pointed at holds an older copy — re-enter from your member panel to re-point."],
+        unreachable: ["down", "Down", "Don't worry — we're aware and fixing this technical difficulty. Your course never goes down — keep learning."],
+        "os-down": ["down", "OS store down", "This OS's own store is unreachable — progress still saves on this device and syncs when it returns."]
+      };
+      const m = v && map[v.state];
+      if (!m) return;
+      st.className = "sys-state " + m[0];
+      st.textContent = m[1];
+      bn.className = "sys-banner " + m[0];
+      bn.innerHTML = m[2];
+    }
+    if (window.__sysFill) window.removeEventListener("rfx:academy-health", window.__sysFill);
+    window.__sysFill = fillSys;
+    window.addEventListener("rfx:academy-health", window.__sysFill);
+    fillSys();
+    root.appendChild(sysCard);
+
     // Badges & Recognition — the full track, earned and locked, so students
     // know what the badges are and how to earn them before they even start.
     const earnedBadges = [];
-    CHAPTERS.forEach(c => (chState(c.id).badges || []).forEach(b => { if (BADGES[b]) earnedBadges.push({ ch: c.id, kind: "quiz", ...BADGES[b] }); }));
+    CHAPTERS.forEach(c => (chState(c.id).badges || []).forEach(b => { if (BADGES[b]) earnedBadges.push({ ch: c.id, kind: "quiz", tier: (chState(c.id).badgeTier || {})[b], ...BADGES[b] }); }));
     (S.timeBadges || []).forEach(b => { if (BADGES[b]) earnedBadges.push({ ch: null, kind: "time", ...BADGES[b] }); });
     const earnedNames = new Set(earnedBadges.map(b => b.name));
     const badgeTrack = Object.values(BADGES).map(b => {
       const owned = earnedNames.has(b.name);
       const got = earnedBadges.find(x => x.name === b.name);
       const ch = got ? got.ch : null;
+      const tag = owned && got && got.tier && got.tier !== "standard" ? `<em class="badge-tier" style="color:${TIERS[got.tier].color}">${TIERS[got.tier].name.toUpperCase()}</em>` : "";
       return `<div class="badge-tile ${owned ? "" : "locked"}" title="${esc(b.desc)}">
-        <div class="badge-tile-ic">${owned ? b.icon : ICONS.lock}</div>
-        <div><b>${b.name}</b><p>${owned ? "Earned" + (ch ? " · Chapter " + ch : (got && got.kind === "time") ? " · Study time" : "") : b.desc.split(".")[0]}</p></div>
+        <div class="badge-tile-ic">${owned ? (ICONS[b.ic] || "") : ICONS.lock}</div>
+        <div><b>${b.name}${tag}</b><p>${owned ? "Earned" + (ch ? " · Chapter " + ch : (got && got.kind === "time") ? " · Study time" : "") : b.desc.split(".")[0]}</p></div>
       </div>`;
     }).join("");
     root.appendChild(el("div", "panel badge-panel", `
       <h3 class="panel-title gold-serif">Badges &amp; Recognition</h3>
-      <p class="panel-sub">Quiz badges, earned not given — 80%+ for 🎖️ Honours, 100% for 💎 Flawless, a 90%+ retake for 🏆 Distinction Hunter, passing after a fail for 🦁 Heart of a Lion, and your first pass for ⚔️ First Blood. Time badges honour the unseen grind — the hours logged ⏱️ and the consecutive days you show up 🌙. The rarest prove the most.</p>
+      <p class="panel-sub">Quiz badges, earned not given — 80%+ for <b>Honours</b>, 100% for <b>Flawless</b>, a 90%+ retake for <b>Distinction Hunter</b>, passing after a fail for <b>Heart of a Lion</b>, and your first pass for <b>First Blood</b>. Time badges honour the unseen grind — the hours logged and the consecutive days you show up. The rarest prove the most.</p>
       <div class="badge-shelf">${badgeTrack}</div>
-      ${S.distStreak >= 2 ? `<div class="dist-banner fire"><span>🔥</span><div><b>You're on fire — ${S.distStreak} chapters in a row at 80%+</b><p>Best streak: ${S.distBest}. This is how institutions are built.</p></div></div>` : S.distStreak === 1 ? `<div class="dist-banner"><span>🔥</span><div><b>1 chapter at 80%+ — keep the distinction streak alive</b><p>Two in a row and you're officially on fire.</p></div></div>` : ""}`));
+      ${S.distStreak >= 2 ? `<div class="dist-banner fire"><span class="dist-ic">${ICONS.flame}</span><div><b>You're on fire — ${S.distStreak} chapters in a row at 80%+</b><p>Best streak: ${S.distBest}. This is how institutions are built.</p></div></div>` : S.distStreak === 1 ? `<div class="dist-banner"><span class="dist-ic">${ICONS.flame}</span><div><b>1 chapter at 80%+ — keep the distinction streak alive</b><p>Two in a row and you're officially on fire.</p></div></div>` : ""}`));
 
     // Rank + journey quick links
     const rankCard = el("div", "rank-card", `
-      <div class="rank-ic">${rank.icon}</div>
+      <div class="rank-ic">${ICONS[rank.ic] || rank.icon}</div>
       <div class="rank-mid">
         <div class="rank-name">${rank.name}</div>
         <div class="rank-xpbar"><span style="width:${rankPct()}%"></span></div>
-        <div class="rank-xplbl">${S.xp} XP · ${nr ? "next: " + nr.icon + " " + nr.name + " at " + nr.min + " XP" : "max rank reached"}</div>
+        <div class="rank-xplbl">${S.xp} XP · ${nr ? "next: " + (ICONS[nr.ic] || nr.icon) + " " + nr.name + " at " + nr.min + " XP" : "max rank reached"}</div>
       </div>
       <div class="rank-go">
         <button class="btn-ghost" data-go="map">Journey</button>
         <button class="btn-ghost" data-go="progress">Insights</button>
       </div>
-      ${nr ? `<p class="rank-note">${nr.icon} ${nr.name} awaits at ${nr.min} XP — the crown is earned through retakes, streaks and mastery, not just completion.</p>` : `<p class="rank-note">👑 You hold the rarest rank in the Academy. Few ever reach it — fewer keep it. The market has no higher honour.</p>`}`);
+      ${nr ? `<p class="rank-note">The ${nr.name} rank awaits at ${nr.min} XP — the crown is earned through retakes, streaks and mastery, not just completion.</p>` : `<p class="rank-note">${ICONS.crown} You hold the rarest rank in the Academy. Few ever reach it — fewer keep it. The market has no higher honour.</p>`}`);
     function rankPct() {
       if (!nr) return 100;
       const prevMin = rank.min;
@@ -905,11 +1314,12 @@
     const ct = root.querySelector(".cert-teaser [data-go]");
     if (ct) ct.addEventListener("click", () => location.hash = "#/certificate");
 
-    // Coming soon strip
+    // Live tools strip — Laboratory and the AI Mentor are open doors now
     root.appendChild(el("div", "soon-strip", `
-      <div class="soon-chip">${ICONS.flask} Trading Laboratory — soon</div>
-      <div class="soon-chip">${ICONS.robot} AI Mentor — soon</div>
-      <div class="soon-chip">${ICONS.pen} Trade Journal — soon</div>`));
+      <button class="soon-chip live" data-go="lab">${ICONS.flask} Trading Laboratory</button>
+      <button class="soon-chip live" data-go="mentor">${ICONS.robot} AI Mentor — your trading twin</button>
+      <div class="soon-chip dim">${ICONS.pen} Trade Journal — soon</div>`));
+    root.querySelectorAll(".soon-strip [data-go]").forEach(go => go.addEventListener("click", () => location.hash = "#/" + go.dataset.go));
 
     // Academy FAQ + Fair Usage Policy
     root.appendChild(academyBlock());
@@ -1000,12 +1410,15 @@
     const p = profile();
     ensureCode(p);
     const hoff = handoffRec();
-    root.appendChild(el("div", "page-head", `
-      <p class="eyebrow">Student access</p>
-      <h2>Your profile</h2>
-      <p class="page-sub">${hoff
-        ? "Your identity record — verified by Reality FX registration. The name here is exactly what prints on your certificate."
-        : "Your identity record — the name here is exactly what prints on your certificate. Phase 2 registration will verify and lock these details; for now they're yours to keep accurate."}</p>`));
+    root.appendChild(el("div", "page-head profile-head", `
+      <div>
+        <p class="eyebrow">Student access</p>
+        <h2>Your profile</h2>
+        <p class="page-sub">${hoff
+          ? "Your identity record — verified by Reality FX registration. The name here is exactly what prints on your certificate."
+          : "Your identity record — the name here is exactly what prints on your certificate. Phase 2 registration will verify and lock these details; for now they're yours to keep accurate."}</p>
+      </div>
+      ${hoff ? `<a class="btn-gold profile-portal-btn" href="${esc(academyUrl("member.html"))}">Student Portal — My RFX Account</a>` : ""}`));
 
     const card = el("div", "panel profile-card");
     card.innerHTML = `
@@ -1018,7 +1431,7 @@
             ? `<p class="profile-code">Student ID <b>${esc(hoff.studentId)}</b><span>verified by Reality FX registration · your passport in the Academy</span></p>`
             : `<p class="profile-code">Student Code <b>${esc(p.code)}</b><span>your passport in the Academy · appears on your certificate</span></p>`}
           <div class="pf-photo-ctl">
-            <button class="btn-ghost sm" id="pf-photo-btn">${p.photo ? "Change photo" : "📷 Add photo"}</button>
+            <button class="btn-ghost sm" id="pf-photo-btn">${p.photo ? "Change photo" : `<span class="btn-ic">${ICONS.camera}</span> Add photo`}</button>
             ${p.photo ? `<button class="btn-ghost sm danger" id="pf-photo-rm">Remove</button>` : ""}
             <input type="file" id="pf-photo-file" accept="image/*" hidden>
             <p class="pf-photo-hint">Clear face, good light. This is your academy identity — Phase 2 registration verifies it.</p>
@@ -1072,7 +1485,7 @@
       const rm = document.getElementById("pf-photo-rm");
       if (rm) rm.remove();
       const btn = document.getElementById("pf-photo-btn");
-      if (btn) btn.textContent = "📷 Add photo";
+      if (btn) btn.innerHTML = `<span class="btn-ic">${ICONS.camera}</span> Add photo`;
       toast("Photo removed — saved when you hit Save profile", "ok");
     });
 
@@ -1100,15 +1513,17 @@
     root.appendChild(el("div", "page-head", `
       <p class="eyebrow">The Journey</p>
       <h2>Thirteen chapters. One transformation.</h2>
-      <p class="page-sub">Complete a chapter's slides and pass its quiz to unlock the next. ${progressPct()}% complete.</p>`));
+      <p class="page-sub">Complete a chapter's slides and pass its quiz to unlock the next. ${progressPct()}% complete.</p>
+      <p class="tier-pill" style="color:${TIERS[tierKey()].color};border-color:${TIERS[tierKey()].color}55"><span class="tier-pill-dot" style="background:${TIERS[tierKey()].color}"></span>Your lane: ${S.tier ? tierName() + " · " + tierTag() : "not chosen yet — pick one in your first lesson"}</p>`));
 
     const path = el("div", "journey");
     CHAPTERS.forEach(ch => {
       const st = chState(ch.id);
+      const deck = tierDeck(ch) || ch;
       const unlocked = isUnlocked(ch);
       const done = isComplete(ch);
       const lock = retryLocked(ch);
-      const badges = (st.badges || []).map(b => BADGES[b] ? BADGES[b].icon : "").join(" ");
+      const badges = (st.badges || []).map(b => badgeIc(b)).join(" ");
       const label = !unlocked ? "Locked" : done ? "Complete" : lock > 0 ? "Reflection" : "In progress";
       const btn = !unlocked
         ? `<button class="btn-lock" disabled>Complete previous chapter</button>`
@@ -1124,11 +1539,11 @@
           <h3 class="gold-serif">${esc(ch.title)}</h3>
           <p class="j-focus">${esc(ch.focus)}</p>
           <div class="j-meta">
-            <span>${ch.slides} slides</span>
-            <span>${ch.quiz ? ch.quiz.length + " quiz Qs" : "quiz bank pending"}</span>
-            <span class="j-time" title="Reading + quiz time">≈ ${fmtDur(chapterTotalMins(ch))}${ch.quiz ? ` <small>· +${fmtDur(quizMins(ch))} quiz</small>` : ""}</span>
+            <span>${deck.slides} slides</span>
+            <span>${deck.quiz ? deck.quiz.length + " quiz Qs" : "quiz bank pending"}</span>
+            <span class="j-time" title="Reading + quiz time">≈ ${fmtDur(chapterTotalMins(ch))}${deck.quiz ? ` <small>· +${fmtDur(quizMins(ch))} quiz</small>` : ""}</span>
             ${diffChip(ch)}
-            ${st.quizBest !== null ? `<span class="j-best">best ${st.quizBest}%</span>` : ""}
+            ${chBest(ch.id) > 0 ? `<span class="j-best">best ${chBest(ch.id)}%</span>` : ""}
             ${badges ? `<span class="j-best" title="Badges earned">${badges}</span>` : ""}
           </div>
           ${btn}
@@ -1142,7 +1557,11 @@
   /* ============================================================
      LESSON PLAYER + QUIZ ENGINE
      ============================================================ */
-  const session = { ch: null, idx: 0, quizIdx: 0, firstCorrect: 0, answered: {}, answeredCount: { n: 0, msSum: 0 }, prevSlide: null, slideShownAt: 0, qShownAt: 0, revision: false };
+  const session = { ch: null, idx: 0, quizIdx: 0, firstCorrect: 0, answered: {}, answeredCount: { n: 0, msSum: 0 }, prevSlide: null, slideShownAt: 0, qShownAt: 0, revision: false,
+    // per-attempt behavioral trail for the integrity analyser: response
+    // times, chosen options, correctness and question length — the raw
+    // material for the smarter human-psychology heuristics
+    at: { times: [], picks: [], corrects: [], qlens: [] } };
 
   function renderLesson(root, chId, startSlide, revision) {
     const ch = CHAPTERS.find(c => c.id === chId);
@@ -1165,8 +1584,25 @@
       }
     }
 
+    // The one-choice gate: no difficulty chosen yet → the gold tier cards
+    // appear before any learning begins. Once chosen, the tier is locked.
+    if (!S.tier && !revision) {
+      showTierPicker(root, ch, startSlide);
+      return;
+    }
+
     session.revision = !!revision;
-    session.ch = ch;
+    // Resolve the active tier's deck: the whole player reads session.ch, so a
+    // parallel tier deck (elite/challenging) simply replaces the deck fields.
+    // Un-authored tiers fall back to the core material with a quiet note.
+    const rdeck = tierDeck(ch);
+    if (rdeck) {
+      session.ch = Object.assign({}, ch, { native: rdeck.native, quiz: rdeck.quiz, quizSlides: rdeck.quizSlides, slides: rdeck.native.length });
+      session.tierFallback = false;
+    } else {
+      session.ch = ch;
+      session.tierFallback = tierKey() !== "standard";
+    }
     const st = chState(ch.id);
     // revision always starts at slide 1 (read the material from the top)
     let idx = startSlide && !revision ? startSlide - 1 : 0;
@@ -1182,6 +1618,7 @@
     session.firstCorrect = 0;
     session.answered = {};
     session.answeredCount = { n: 0, msSum: 0 };
+    session.at = { times: [], picks: [], corrects: [], qlens: [] }; // fresh behavioural trail per attempt
 
     // Fair Play: record that the student actually reviewed during reflection
     if (session.revision && ch.quiz && lock > 0) {
@@ -1198,6 +1635,16 @@
 
     const stage = el("div", "stage");
     root.appendChild(stage);
+
+    // Retake framing: a failed chapter re-entered is practice, not punishment.
+    // The banner reframes the attempt before a single slide is read.
+    if (!session.revision && st.lastScore != null && st.lastScore < PASS_PCT) {
+      root.insertBefore(el("div", "retake-banner", `${ICONS.sparkle}<span><b>First pass is practice.</b> You're here to learn it properly — this attempt is where mastery gets built. Go slower than last time, notes open.</span>`), stage);
+    } else if (session.tierFallback) {
+      // The tier's own deck for this chapter is still being forged — be honest.
+      root.insertBefore(el("div", "retake-banner", `${ICONS.sparkle}<span><b>Your ${tierName()} depth for this chapter is still being forged.</b> You're reading the core material — the elite lens lands here soon.</span>`), stage);
+    }
+
     drawSlide(stage);
 
     // live countdown + review-seconds tracking while in revision mode
@@ -1225,6 +1672,87 @@
     }
   }
 
+  /* ---------- The tier picker (one-time choice before the course) ---------- */
+  const TIER_IN = {
+    standard: [
+      "The complete 13-chapter course",
+      "Recall + application questions with gold explanations",
+      "Earns every badge — a full, trade-ready education"
+    ],
+    challenging: [
+      "Everything in Standard, plus:",
+      "Application and synthesis questions — harder distractors",
+      "Insider notes under every explanation",
+      "Challenging-tier recognition on your badges"
+    ],
+    elite: [
+      "Not just harder questions — a different course",
+      "Advanced concepts beyond the basics — the true value of the systems",
+      "Real trading math and probability: sizing, R-multiples, expectancy, Kelly",
+      "The institutional layer — how the smart money thinks",
+      "Elite-tier badges open the merch threshold"
+    ]
+  };
+  // Lane previews — every card shows a peek at what the lane actually reads.
+  // Samples are pulled from the chapter's REAL deck when forged; the signature
+  // lines below are the lane's character everywhere else.
+  const LANE_PREVIEW = {
+    standard: {
+      line: "The complete course — the language, the players, and the habits that make a trader.",
+      sample: ["The Foreign Exchange Market", "Both Sides of the Market", "The Traders You'll Meet"]
+    },
+    challenging: {
+      line: "Applied depth — real scenarios, worked maths, and your call before the reveal.",
+      sample: ["You Are the Analyst", "The Spread Tax, Itemised", "Sizing the Unknown"]
+    },
+    elite: {
+      line: "A different course — advanced concepts, real trading math, the institutional layer.",
+      sample: ["The Market Is a Probability Machine", "The $7.5 Trillion Illusion", "The Kelly Criterion"]
+    }
+  };
+  function lanePeek(k, ch) {
+    const base = LANE_PREVIEW[k];
+    const deck = k === "standard" ? ch : (ch && ch[k]);
+    const titles = [];
+    if (deck && deck.native) for (const s of deck.native) if (s && s.title && titles.length < 3) titles.push(s.title);
+    return {
+      line: base.line,
+      sample: titles.length ? titles : base.sample,
+      note: k !== "standard" && !deck ? "This chapter reads the core material for now — " + TIERS[k].name + " depth arrives as the forge continues." : ""
+    };
+  }
+  function showTierPicker(root, ch, startSlide) {
+    root.appendChild(el("div", "page-head", `
+      <p class="eyebrow">Before you begin</p>
+      <h2>Choose your difficulty</h2>
+      <p class="page-sub">One choice, made once — it shapes what you read, how deeply you're tested, and what your recognition means. Every tier is a complete education; the higher the tier, the more the Academy assumes you already know — and the more it gives you in return.</p>`));
+    const grid = el("div", "tier-pick");
+    TIER_ORDER.forEach(k => {
+      const t = TIERS[k];
+      const pv = lanePeek(k, ch);
+      grid.appendChild(el("div", "tier-card", `
+        <div class="tier-card-head"><span class="tier-name" style="color:${t.color}">${t.name}</span><span class="tier-dot" style="background:${t.color}"></span></div>
+        <p class="tier-tag">${esc(t.tag)}</p>
+        <div class="tier-peek" style="--peek:${t.color}">
+          <div class="tier-peek-head">Peek inside · what you'll read</div>
+          <div class="tier-peek-titles">${pv.sample.map(s => `<span>${esc(s)}</span>`).join("")}</div>
+          <p class="tier-peek-line">${esc(pv.line)}</p>
+          ${pv.note ? `<p class="tier-peek-note">${esc(pv.note)}</p>` : ""}
+        </div>
+        <ul class="tier-in">${TIER_IN[k].map(x => `<li>${esc(x)}</li>`).join("")}</ul>
+        <button class="btn-gold tier-go" data-tier="${k}">Choose ${t.name}</button>`));
+    });
+    root.appendChild(grid);
+    root.appendChild(el("div", "tier-pick-note", `${ICONS.sparkle}<span><b>One lane, deliberately chosen.</b> You can't switch mid-course freely — the only doors are a deliberate <b>upgrade</b> (after a 100% pass) or a <b>struggle downgrade</b> (offered with your consent if a tier is too steep). Graduates unlock every tier free. This is your first lane, not your only one.</span>`));
+    grid.querySelectorAll(".tier-go").forEach(b => b.addEventListener("click", () => {
+      S.tier = b.dataset.tier;
+      save();
+      toast("Difficulty set: " + TIERS[b.dataset.tier].name + " — locked in", "rank");
+      root.innerHTML = "";
+      renderLesson(root, ch.id, startSlide, false);
+    }));
+  }
+
   function drawSlide(stage) {
     const ch = session.ch, st = chState(ch.id);
     const n = session.idx + 1;
@@ -1243,6 +1771,9 @@
         addXp(XP_SLIDE);
         save();
       }
+      // quick-resume marker: where the student actually left off, so the
+      // dashboard strip can pick them straight back up
+      S.lastLesson = { ch: ch.id, slide: n, ts: Date.now() };
     }
     const pct = Math.round(n / ch.slides * 100);
     const fill = document.querySelector(".lesson-progress-fill");
@@ -1397,6 +1928,14 @@
     </div>`;
   }
 
+  // Mid-quiz encouragement: two wrong answers in a row earns a gentle line,
+  // not a spiral. The red moment becomes coaching — the fragile student is
+  // pulled back in before the quiz turns into a losing streak in their head.
+  const QNUDGE = [
+    "Shake it off — two in a row means the lesson's landing. The next one's yours.",
+    "That's two. Breathe, re-read the gold note, and take the next one — you've got this.",
+    "The market just taught you twice for free. Now make it pay — next question, your turn."
+  ];
   function quizCard(q) {
     const n = session.idx + 1;
     const chosen = session.answered[n];
@@ -1410,12 +1949,19 @@
       }
       return `<button class="${cls}" data-i="${i}" ${chosen !== undefined ? "disabled" : ""}>${mark}<span>${esc(o)}</span></button>`;
     }).join("");
+    let nudgeLine = "";
+    if (chosen !== undefined && chosen !== q.answer) {
+      const corr = session.at.corrects || [];
+      let bad = 0;
+      for (let i = corr.length - 1; i >= 0 && !corr[i]; i--) bad++;
+      if (bad >= 2) nudgeLine = `<p class="quiz-nudge">${QNUDGE[(session.idx + bad) % QNUDGE.length]}</p>`;
+    }
     return `
       <div class="quiz-card">
         <div class="quiz-tag">Checkpoint · slide ${n}</div>
         <p class="quiz-q">${esc(q.q)}</p>
         <div class="quiz-opts">${opts}</div>
-        ${chosen !== undefined ? `<div class="quiz-fb ${chosen === q.answer ? "good" : "bad"}">${chosen === q.answer ? "Correct." : "Not quite."} ${esc(q.explain)}</div>` : ""}
+        ${chosen !== undefined ? `<div class="quiz-fb ${chosen === q.answer ? "good" : "bad"}">${chosen === q.answer ? "Correct." : "Not quite."} ${esc(q.explain)}${chosen === q.answer ? "" : nudgeLine}</div>` : ""}
       </div>`;
   }
 
@@ -1464,6 +2010,7 @@
     const ms = Math.min(Math.max(Date.now() - (session.qShownAt || Date.now()), 300), 600000);
     session.answeredCount.n++;
     session.answeredCount.msSum += ms;
+    session.at.times.push(ms); session.at.picks.push(pick); session.at.corrects.push(correct); session.at.qlens.push(q.q.length);
     if (correct) {
       session.firstCorrect++;
       const st = chState(ch.id);
@@ -1492,6 +2039,82 @@
     touch(); save();
     drawSlide(document.querySelector(".stage"));
   });
+
+  /* ---------- Integrity analyser (human-psychology heuristics) ----------
+     A human answering a quiz is a fingerprint: response times wobble,
+     reading time tracks question length, picks wander. Machines (or a
+     student with the answer key open) produce patterns humans don't:
+     robotic rhythms, instant streaks, untouched reading time, and the
+     classic look-it-up pause. Each finding is a REVIEW TRIGGER for the
+     moderator — never a verdict. Deduped per chapter per type, capped at
+     three flags per attempt so one bad run can't flood the queue. */
+  function analyzeAttempt(ch, st, prevBest, score, wasFailed) {
+    const T = session.at.times, P = session.at.picks, C = session.at.corrects, L = session.at.qlens;
+    const n = T.length;
+    if (n < 5) return; // too few answers to judge a rhythm
+    const now = Date.now();
+    let raised = 0;
+    const flag = (type, extra) => {
+      if (raised >= 3) return;
+      if (S.flags.some(f => f.type === type && f.ch === ch.id)) return; // one per chapter per type
+      S.flags.push(Object.assign({ type, ch: ch.id, qi: 0, ts: now }, extra || {}));
+      if (S.flags.length > 200) S.flags = S.flags.slice(-200);
+      raised++;
+    };
+    const mean = T.reduce((a, b) => a + b, 0) / n;
+    const correctRate = C.filter(Boolean).length / n;
+
+    // 1. Robotic rhythm — a human's response times wobble (CV ~0.4+); a
+    //    key-reader answers in a tight band. Low variance + fast mean = clockwork.
+    if (n >= 6 && mean < 5000) {
+      const sd = Math.sqrt(T.reduce((a, b) => a + (b - mean) * (b - mean), 0) / n);
+      if (mean > 0 && sd / mean < 0.22) {
+        flag("uniform-timing", { n, mean: Math.round(mean), cv: +(sd / mean).toFixed(2), note: "Response times vary by less than 22% across " + n + " answers — human timing wobbles far more. Possible key-reader." });
+      }
+    }
+    // 2. Never reading — a human takes longer on longer questions; near-zero
+    //    or negative correlation means the text isn't being read at all.
+    if (n >= 6 && mean < 6000) {
+      const mL = L.reduce((a, b) => a + b, 0) / n;
+      const sL = Math.sqrt(L.reduce((a, b) => a + (b - mL) * (b - mL), 0) / n) || 1;
+      const sT = Math.sqrt(T.reduce((a, b) => a + (b - mean) * (b - mean), 0) / n) || 1;
+      const r = (T.reduce((a, b, i) => a + (T[i] - mean) * (L[i] - mL), 0) / n) / (sT * sL);
+      if (r < 0.1) {
+        flag("no-reading", { n, corr: +r.toFixed(2), note: "Answer speed doesn't track question length (r=" + r.toFixed(2) + ") — the questions are barely being read." });
+      }
+    }
+    // 3. Instant streak — five or more correct answers under reading speed,
+    //    back to back. One fast answer is a reflex; five is a script.
+    let streak = 0, best = 0;
+    T.forEach((t, i) => { streak = (C[i] && t < 1400) ? streak + 1 : 0; best = Math.max(best, streak); });
+    if (best >= 5) {
+      flag("instant-streak", { streak: best, note: best + " consecutive correct answers in under 1.4s each — impossible to read, let alone decide." });
+    }
+    // 4. Pattern picks — an 80%+ run that follows a mechanical pattern:
+    //    the same option every time, strict alternation, or a strict march.
+    if (n >= 8 && correctRate >= 0.8) {
+      const counts = [0, 0, 0, 0];
+      P.forEach(p => { if (counts[p] != null) counts[p]++; });
+      const same = Math.max.apply(null, counts) >= n - 1;
+      const alt = P.every((p, i) => i === 0 || p !== P[i - 1]) && new Set(P).size === 2;
+      const asc = P.every((p, i) => i === 0 || p > P[i - 1]);
+      if (same || alt || asc) {
+        flag("pattern-picks", { n, note: "An 80%+ run that follows a mechanical answer pattern (uniform, alternating or marching picks) — humans don't answer like that." });
+      }
+    }
+    // 5. Jump retake — a retake that leaps 40+ points with almost no review.
+    //    The reflection window exists to study; this big a jump from a few
+    //    minutes of reading is the memorise-and-reproduce tell.
+    if (prevBest != null && (wasFailed || (st.retries || 0) > 0) && score - prevBest >= 40 && (st.reviewSecs || 0) < 180) {
+      flag("jump-retake", { from: prevBest, to: score, reviewSecs: st.reviewSecs || 0, note: "Retake jumped " + prevBest + "→" + score + " with only " + (st.reviewSecs || 0) + "s of review — far more than the reflection window should produce." });
+    }
+    // 6. Paused search — a long silence before the FIRST answer, then a fast
+    //    near-perfect run. The classic look-it-up signature: read, leave,
+    //    search, return, cruise.
+    if (T[0] > 90000 && score >= 90 && mean < 6000) {
+      flag("paused-search", { firstMs: T[0], mean: Math.round(mean), note: "Took " + Math.round(T[0] / 1000) + "s before the first answer, then cruised at " + Math.round(mean) + "ms/answer with a " + score + "% — the pause-and-search pattern." });
+    }
+  }
 
   function finishChapter(stage) {
     const ch = session.ch, st = chState(ch.id);
@@ -1535,10 +2158,18 @@
       flagsSync(); // report to the academy server for moderator review
     }
 
+    // Smarter human-psychology heuristics — the aggregate behavioural
+    // fingerprint of this attempt (rhythm, reading, streaks, patterns,
+    // retake jumps, pause-then-cruise). Review triggers, never verdicts.
+    analyzeAttempt(ch, st, prevBest, score, wasFailed);
+    flagsSync(); // push aggregate findings to the moderator NOW — never wait for a reboot
+
     // Badges + retake bookkeeping
     const passedCount = CHAPTERS.filter(c => c.quiz && chState(c.id).passed).length;
     session.nudge = ""; // every attempt starts clean — never carry a nudge into a fail reveal
     session.fire = null; // ...and never a stale fire streak card either
+    session.upgradeTier = null; // 100% pass → offer the next difficulty lane
+    session.downgradeTier = null; // repeated sub-pass on a higher tier → gentle step-down offer
     if (passed) {
       st.passed = true;
       // a pass proves the whole chapter — credit every slide so isComplete()
@@ -1546,7 +2177,11 @@
       // otherwise leaves quiz slides out of `viewed` for first-time passers)
       st.viewed = Array.from({ length: ch.slides }, (_, i) => i + 1);
       addXp(XP_QUIZ_PASS);
-      if (score === 100) { awardBadge(ch, "perfect"); addXp(50, "perfect-quiz"); }
+      if (score === 100) {
+        awardBadge(ch, "perfect"); addXp(50, "perfect-quiz");
+        // The upgrade door: a flawless pass proves the lane is too easy — offer the next tier.
+        if (tierKey() !== "elite") session.upgradeTier = TIER_ORDER[TIER_ORDER.indexOf(tierKey()) + 1];
+      }
       if (score >= 80) awardBadge(ch, "honours");
       if (hadPassed && prevBest !== null && prevBest < 90 && score >= 90) awardBadge(ch, "distinction");
       if (wasFailed || st.retries > 0) awardBadge(ch, "lion");
@@ -1559,19 +2194,19 @@
       // Recognition tier + near-miss: 80%+ is a distinction and gets celebrated,
       // not pushed — retake pressure is reserved for scores below the line.
       if (score >= 90 && score < 100) {
-        session.nudge = `<div class="nudge-card"><span>💎</span><div><p class="nudge-t"><b>Outstanding — ${score}%!</b> We're proud of you.</p><p class="nudge-s">At 100% the <b>Flawless</b> badge — the rarest in the Academy — is yours. No pressure: this chapter is already a win.</p></div></div>`;
+        session.nudge = `<div class="nudge-card"><span class="nudge-ic">${ICONS.diamond}</span><div><p class="nudge-t"><b>Outstanding — ${score}%!</b> We're proud of you.</p><p class="nudge-s">At 100% the <b>Flawless</b> badge — the rarest in the Academy — is yours. No pressure: this chapter is already a win.</p></div></div>`;
       } else if (score >= 80 && score < 90) {
-        session.nudge = `<div class="nudge-card"><span>🎖️</span><div><p class="nudge-t"><b>Excellent — ${score}%!</b> Honours-level work, and we're proud of you.</p><p class="nudge-s">A 90%+ retake unlocks the <b>Distinction Hunter</b> badge and top-tier privileges — it's there if you ever want it.</p></div></div>`;
+        session.nudge = `<div class="nudge-card"><span class="nudge-ic">${ICONS.medal}</span><div><p class="nudge-t"><b>Excellent — ${score}%!</b> Honours-level work, and we're proud of you.</p><p class="nudge-s">A 90%+ retake unlocks the <b>Distinction Hunter</b> badge and top-tier privileges — it's there if you ever want it.</p></div></div>`;
       } else if (score < 80) {
         const owned = st.badges || [];
         const cands = [];
-        if (!owned.includes("honours")) cands.push({ icon: "🎖️", name: "Honours", need: 80 });
-        if (!owned.includes("perfect")) cands.push({ icon: "💎", name: "Flawless", need: 100 });
-        if (!owned.includes("distinction") && (hadPassed || st.retries > 0 || wasFailed)) cands.push({ icon: "🏆", name: "Distinction Hunter", need: 90 });
+        if (!owned.includes("honours")) cands.push({ ic: "medal", name: "Honours", need: 80 });
+        if (!owned.includes("perfect")) cands.push({ ic: "diamond", name: "Flawless", need: 100 });
+        if (!owned.includes("distinction") && (hadPassed || st.retries > 0 || wasFailed)) cands.push({ ic: "trophy", name: "Distinction Hunter", need: 90 });
         if (cands.length) {
           const best = cands.reduce((a, b) => (b.need - score < a.need - score ? b : a));
           const gap = best.need - score;
-          session.nudge = `<div class="nudge-card"><span>${best.icon}</span><div><p class="nudge-t">Just <b>${gap}% more</b> would earn you the <b>${best.name}</b> badge</p><p class="nudge-s">${gap <= 10 ? "You're one clean run away — the retake is free." : "Re-read the chapter and retake — fair play rewards the review."}</p></div></div>`;
+          session.nudge = `<div class="nudge-card"><span class="nudge-ic">${ICONS[best.ic]}</span><div><p class="nudge-t">Just <b>${gap}% more</b> would earn you the <b>${best.name}</b> badge</p><p class="nudge-s">${gap <= 10 ? "You're one clean run away — the retake is free." : "Re-read the chapter and retake — fair play rewards the review."}</p></div></div>`;
         }
       }
     } else {
@@ -1579,6 +2214,9 @@
       // only a RETRY consumes a token — the first attempt is free
       if (wasFailed || (st.retries || 0) > 0) st.retries = (st.retries || 0) + 1;
       if (!st.firstFailAt) st.firstFailAt = Date.now();
+      // The struggle door: a higher tier taken twice without a pass is honest
+      // effort — offer a step down with consent, never force it.
+      if (tierKey() !== "standard" && (st.retries || 0) >= 1) session.downgradeTier = TIER_ORDER[Math.max(0, TIER_ORDER.indexOf(tierKey()) - 1)];
     }
 
     // Fair Play heuristic: a RETRY taken with negligible review. The 2h
@@ -1618,9 +2256,13 @@
     const st = chState(ch.id);
     if (st.badges.includes(key)) return;
     st.badges.push(key);
+    // Tier-aware recognition: a badge earned in a higher lane is worth more.
+    // The tier tag rides with the badge so the dashboard can show it.
+    if (!st.badgeTier) st.badgeTier = {};
+    st.badgeTier[key] = tierKey();
     save();
     const b = BADGES[key];
-    toast(b ? "Badge earned: " + b.icon + " " + b.name : "Badge earned!", "rank");
+    toast(b ? "Badge earned: " + b.name : "Badge earned!", "rank");
   }
 
   function revealScore() {
@@ -1634,7 +2276,7 @@
     const lock = retryLocked(ch);
     const tokens = retriesLeft(ch);
     const badgeRow = newBadges.length
-      ? `<div class="reveal-badges">${newBadges.map(b => `<div class="badge-pill"><span>${BADGES[b].icon}</span><div><b>${BADGES[b].name}</b><p>${esc(BADGES[b].desc)}</p></div></div>`).join("")}</div>`
+      ? `<div class="reveal-badges">${newBadges.map(b => `<div class="badge-pill"><span>${badgeIc(b)}</span><div><b>${BADGES[b].name}</b><p>${esc(BADGES[b].desc)}</p></div></div>`).join("")}</div>`
       : "";
     box.innerHTML = `
       <p class="quiz-tag">Your real score</p>
@@ -1642,7 +2284,9 @@
       <p class="finish-score ${passed ? "pass" : "fail"}">${passed ? "Passed — the next chapter is unlocked." : `Not yet — ${PASS_PCT}% to pass. Reflection time begins now.`}</p>
       ${badgeRow}
       ${session.nudge || ""}
-      ${session.fire ? `<div class="fire-card"><span>🔥</span><div><p class="fire-t">You're on fire — ${session.fire} chapters in a row at 80%+</p><p class="fire-s">Consistency like this is how institutions are built. Keep the streak alive.</p></div></div>` : ""}
+      ${session.fire ? `<div class="fire-card"><span class="fire-ic">${ICONS.flame}</span><div><p class="fire-t">You're on fire — ${session.fire} chapters in a row at 80%+</p><p class="fire-s">Consistency like this is how institutions are built. Keep the streak alive.</p></div></div>` : ""}
+      ${session.upgradeTier ? `<div class="tier-door-card up"><span class="tier-door-ic">${ICONS.flame}</span><div><p class="tier-door-t"><b>100% — you killed it.</b> Piece of cake, huh?</p><p class="tier-door-s">Want to test yourself in <b>${TIERS[session.upgradeTier].name}</b>? Harder questions, insider notes, and recognition that means more. The upgrade is deliberate and one-way — your call.</p><div class="tier-door-btns"><button class="btn-gold sm" id="upgGo">Upgrade to ${TIERS[session.upgradeTier].name}</button><button class="btn-ghost sm" id="upgNo">Stay ${tierName()}</button></div></div></div>` : ""}
+      ${session.downgradeTier ? `<div class="tier-door-card down"><span class="tier-door-ic">${ICONS.heart}</span><div><p class="tier-door-t"><b>${tierName()} is where my toughest students train — no shame in building up to it.</b></p><p class="tier-door-s">A second attempt at this level is honest effort. <b>${TIERS[session.downgradeTier].name}</b> still teaches the full course — and you can return to ${tierName()} free once you graduate. Your call, and I'll respect either.</p><div class="tier-door-btns"><button class="btn-ghost sm" id="dgGo">Move to ${TIERS[session.downgradeTier].name}</button><button class="btn-gold sm" id="dgNo">Stay — I'll beat it</button></div></div></div>` : ""}
       ${!passed ? `<div class="reflect-card">
         <p><b>Reflection period</b> — your next attempt unlocks in <b>${fmtLock(lock)}</b>.</p>
         <p>Retake tokens left: <b>${tokens}/${MAX_RETRIES}</b>. Use the time to re-read the lesson and think about what the questions were really asking — then come back sharper. Honest review beats a rushed retake.</p>
@@ -1675,6 +2319,29 @@
       location.hash = "#/review/" + ch.id;
     });
     if (finMap) finMap.addEventListener("click", () => { location.hash = "#/map"; });
+    // Tier doors: upgrade (deliberate, one-way) and struggle step-down (consent).
+    const upgGo = box.querySelector("#upgGo"), upgNo = box.querySelector("#upgNo");
+    const dgGo = box.querySelector("#dgGo"), dgNo = box.querySelector("#dgNo");
+    const tierDoorDone = (t) => {
+      box.innerHTML = `<div class="tier-door-done">${ICONS.check}<p><b>${t}</b></p><p>Your dashboard and lessons now carry the new lane. Go show it what you're made of.</p><button class="btn-gold" id="tierDoorCont">Continue</button></div>`;
+      box.querySelector("#tierDoorCont").addEventListener("click", () => { location.hash = "#/map"; });
+    };
+    if (upgGo) upgGo.addEventListener("click", () => {
+      S.tier = session.upgradeTier; save();
+      toast("Upgraded to " + TIERS[S.tier].name + " — the Academy now demands more of you", "rank");
+      tierDoorDone("Upgraded to " + TIERS[S.tier].name + ".");
+    });
+    if (upgNo) upgNo.addEventListener("click", () => {
+      const c = box.querySelector(".tier-door-card.up"); if (c) c.remove();
+    });
+    if (dgGo) dgGo.addEventListener("click", () => {
+      S.tier = session.downgradeTier; save();
+      toast("Moved to " + TIERS[S.tier].name + " — build the foundation, then come back for the summit", "rank");
+      tierDoorDone("Now training in " + TIERS[S.tier].name + ".");
+    });
+    if (dgNo) dgNo.addEventListener("click", () => {
+      const c = box.querySelector(".tier-door-card.down"); if (c) c.remove();
+    });
   }
 
   function calibrationText(pollIdx, score) {
@@ -1722,6 +2389,37 @@
   /* ============================================================
      YOUR PATH — adaptive learning hub
      ============================================================ */
+  /* Style intel — the numbers behind each lane. Engineered Academy patterns:
+     illustrative, not a promise of results — the point is that every lane pays
+     when the habits are right, and no style is superior to another. */
+  const STYLE_INTEL = {
+    scalper: [
+      { pct: 55, color: "#E6C565", label: "WIN-RATE ZONE", value: "55%", text: "Scalp winners cluster near 50–60% — frequency, not accuracy, does the work." },
+      { pct: 70, color: "#E9E6DE", label: "VOLATILITY WINDOWS", value: "70%", text: "Roughly 7 in 10 of a scalper's best trades come in the London–New York overlap." },
+      { pct: 30, color: "#9fe3bd", label: "THE SPREAD TAX", value: "30%", text: "Spread + commission can silently eat ~30% of a tight scalp edge." }
+    ],
+    day: [
+      { pct: 60, color: "#E6C565", label: "THE TWO WINDOWS", value: "60%", text: "The open and the close carry ~60% of a day trader's daily range." },
+      { pct: 33, color: "#E9E6DE", label: "WIN RATE NEEDED", value: "33%", text: "At 1:2 reward-to-risk, a day trader only needs ~33% wins to stay green." },
+      { pct: 45, color: "#9fe3bd", label: "FIRST-HOUR BIAS", value: "45%", text: "Nearly half of a day's directional move often prints in the first hour." }
+    ],
+    swing: [
+      { pct: 60, color: "#E6C565", label: "TREND ADHERENCE", value: "60%", text: "Roughly 6 in 10 swing winners ride with the daily trend, not against it." },
+      { pct: 25, color: "#E9E6DE", label: "PROFIT FROM FEW", value: "25%", text: "Swing traders often see ~25% of their setups deliver most of the month's P&L." },
+      { pct: 70, color: "#9fe3bd", label: "PATIENCE PREMIUM", value: "70%", text: "Letting the setup come to the level beats chasing it ~70% of the time." }
+    ],
+    position: [
+      { pct: 80, color: "#E6C565", label: "THEME OVER TICK", value: "80%", text: "Position traders attribute ~80% of results to the theme, not the entry tick." },
+      { pct: 60, color: "#E9E6DE", label: "HOLD THROUGH NOISE", value: "60%", text: "~60% of the eventual move happens after the position feels 'wrong'." },
+      { pct: 20, color: "#9fe3bd", label: "DRAWDOWN TOLERANCE", value: "20%", text: "A position thesis can draw down 20%+ and still be right — size for it." }
+    ],
+    general: [
+      { pct: 40, color: "#E6C565", label: "DATA DECIDES", value: "40%", text: "Most traders' natural style is revealed within their first ~40 graded answers." },
+      { pct: 100, color: "#E9E6DE", label: "NO WRONG LANE", value: "100%", text: "Every style makes money with discipline — the choice is entirely yours." },
+      { pct: 66, color: "#9fe3bd", label: "COMMITMENT EDGE", value: "66%", text: "Traders who master one lane beat the style-collectors ~2 times out of 3." }
+    ]
+  };
+
   function renderPath(root) {
     const prof = styleProfile() || STYLES.general;
     root.appendChild(el("div", "page-head", `
@@ -1743,6 +2441,16 @@
       <p class="path-profile-text">${esc(prof.profile)}</p>
       <div class="path-timeframe"><span>${ICON('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>')}</span><b>Timeframe:</b> ${esc(prof.timeframe)}</div>`;
     root.appendChild(profileCard);
+
+    // Style intel — the numbers behind the lane, drawn as rings
+    const INTEL = STYLE_INTEL[prof.key] || STYLE_INTEL.general;
+    root.appendChild(el("div", "panel", `
+      <h3 class="panel-title gold-serif">Style intel — the numbers behind the ${esc(prof.name)} lane</h3>
+      <p class="panel-sub">Patterns the Academy tracks across traders of your style. These are the habits that make the lane pay — not a promise of results, a picture of the discipline.</p>
+      <div class="intel-grid">
+        ${INTEL.map(i => `<div class="intel-cell">${ringGauge(i.pct, i.color, i.label, i.value, i.text)}</div>`).join("")}
+      </div>
+      <div class="intel-note">${ICONS.sparkle}<span><b>No style is better than another.</b> Scalp, day, swing and position all make money — each carries its own advantages and its own traps. The only wrong lane is the one that doesn't fit you, and the OS adapts to yours, not the other way around.</span></div>`));
 
     // Edge & traps
     const duo = el("div", "lab-grid");
@@ -2022,7 +2730,7 @@
     if (!retakes.length) rt.appendChild(el("p", "dim mod-empty", "No retakes yet — clean first attempts."));
     retakes.forEach(r => rt.appendChild(el("div", "grade-row", `
       <span class="grade-ch">${fmt(r.id)} · ${esc(r.title)}</span>
-      <span class="grade-why">${r.retries} retake${r.retries > 1 ? "s" : ""} · last score ${r.lastScore}%${r.passed ? " · passed" : " · failed"} · review: ${r.reviewed ? "✓ " + fmtTime(r.reviewSecs * 1000) : "✗ none"} · badges: ${(r.badges || []).map(b => BADGES[b] ? BADGES[b].icon : b).join(" ") || "none"}</span>`)));
+      <span class="grade-why">${r.retries} retake${r.retries > 1 ? "s" : ""} · last score ${r.lastScore}%${r.passed ? " · passed" : " · failed"} · review: ${r.reviewed ? "✓ " + fmtTime(r.reviewSecs * 1000) : "✗ none"} · badges: ${(r.badges || []).map(b => badgeIc(b)).join(" ") || "none"}</span>`)));
     root.appendChild(rt);
 
     root.appendChild(el("div", "panel", `<h3 class="panel-title gold-serif">Recent quiz activity (response-time audit)</h3>`));
@@ -2063,6 +2771,7 @@
     grid.appendChild(labOutcomeR());
     grid.appendChild(labDrawdown());
     grid.appendChild(labCircuitBreaker());
+    grid.appendChild(labLadder());
     root.appendChild(grid);
     root.appendChild(el("p", "lab-note", "Pip values vary by pair — EUR/USD ≈ $10 per standard lot, USD/JPY and others differ. Always confirm with your broker."));
   }
@@ -2190,14 +2899,14 @@
     { d: 0.30, v: "The broker's notice: margin call at $7,000. I'm at $6,900." },
     { d: 0.40, v: "I'm not looking at the account anymore. I can't." },
     { d: 0.50, v: "I need +100% just to break even. This can't be real." },
-    { d: 0.51, v: "💥 THEY'RE LIQUIDATING. EVERYTHING IS GOING." } // fires on the last trade (depth 0.52) before the blow-up banner
+    { d: 0.51, v: "THEY'RE LIQUIDATING. EVERYTHING IS GOING." } // fires on the last trade (depth 0.52) before the blow-up banner
   ];
   function ddDepthLabel(d) {
     const pct = Math.round(d * 100);
     return pct <= 10 ? "a bump" : pct <= 20 ? "a real drawdown" : pct <= 35 ? "deep trouble" : "the abyss";
   }
   function labDrawdown() {
-    const c = el("div", "tool-card span2");
+    const c = el("div", "tool-card");
     let bal = DD_START, depth = 0, idx = 0, dead = false, voicesShown = 0;
     const hist = [DD_START];
 
@@ -2211,7 +2920,7 @@
     const pushVoice = () => {
       while (voicesShown < DD_VOICES.length && depth >= DD_VOICES[voicesShown].d) {
         c.querySelector("#dd-log").insertAdjacentHTML("beforeend",
-          `<div class="dd-voice">💭 “${esc(DD_VOICES[voicesShown].v)}”</div>`);
+          `<div class="dd-voice">“${esc(DD_VOICES[voicesShown].v)}”</div>`);
         voicesShown++;
       }
     };
@@ -2222,7 +2931,7 @@
     };
 
     c.innerHTML = `
-      <div class="tool-head"><span class="tool-ic">🕳️</span><div><h3>Drawdown Journey</h3><p class="tool-sub">Hold, cut, or get liquidated — feel what drawdown actually does</p></div></div>
+      <div class="tool-head"><span class="tool-ic">${ICONS.trendDown}</span><div><h3>Drawdown Journey</h3><p class="tool-sub">Hold, cut, or get liquidated — feel what drawdown actually does</p></div></div>
       <div class="dd-board">
         <div class="dd-bals">
           <div class="dd-bal-cell"><p class="dd-lbl">Account balance</p><p class="dd-bal" id="dd-bal">$10,000</p></div>
@@ -2271,8 +2980,8 @@
     function blowUp() {
       dead = true;
       const stage = $("#dd-stage");
-      const banner = `<div class="dd-blow"><b>💥 MARGIN CALL — FORCED LIQUIDATION</b><p>The broker closes your positions at the worst possible prices. The account you built over months is gone in an afternoon — this is what holding past -50% looks like.</p></div>`;
-      c.querySelector("#dd-log").insertAdjacentHTML("beforeend", `<div class="dd-voice danger">💀 The account has been liquidated. From here, recovery is measured in years, not weeks.</div>`);
+      const banner = `<div class="dd-blow"><b>MARGIN CALL — FORCED LIQUIDATION</b><p>The broker closes your positions at the worst possible prices. The account you built over months is gone in an afternoon — this is what holding past -50% looks like.</p></div>`;
+      c.querySelector("#dd-log").insertAdjacentHTML("beforeend", `<div class="dd-voice danger">The account has been liquidated. From here, recovery is measured in years, not weeks.</div>`);
       burstFrom(c); // red explosion + shake from the tool card itself
       aftermath(stage, banner); // keep the explosion banner above the ladder
     }
@@ -2284,7 +2993,7 @@
         stage.innerHTML = `<div class="dd-good"><b>${ICONS.shield} YOU CUT — the loss is accepted</b><p>It stings — every cut does. But the account is still yours, and the climb back is a plan, not a miracle.</p></div>`;
         c.querySelector("#dd-log").insertAdjacentHTML("beforeend", `<div class="dd-voice ok">You stopped the bleed. This is the moment most blown accounts never reached.</div>`);
       } else {
-        stage.innerHTML = `<div class="dd-good"><b>🏁 THE DESCENT ENDS</b><p>You took every trade the market offered. The account is bruised but alive — barely.</p></div>`;
+        stage.innerHTML = `<div class="dd-good"><b>THE DESCENT ENDS</b><p>You took every trade the market offered. The account is bruised but alive — barely.</p></div>`;
       }
       aftermath(stage);
     }
@@ -2302,7 +3011,7 @@
               : "-" + Math.round(depth * 100) + "% needs +" + need.toFixed(1) + "%. From this depth, most accounts never come back. The only way out was the door you walked past earlier.";
       stage.innerHTML = (banner || "") + `
         <div class="dd-after ${dead ? "bad" : ""}">
-          <b>${dead ? "💀 The account didn't survive" : "🧮 The recovery ladder"}</b>
+          <b>${dead ? "The account didn't survive" : "The recovery ladder"}</b>
           <div class="dd-ladder">
             <div class="dd-lrung"><span>You're at</span><b>$${bal.toLocaleString()}</b></div>
             <div class="dd-lrung"><span>Back to $10,000</span><b class="gold">+${need.toFixed(1)}%</b></div>
@@ -2336,6 +3045,36 @@
 
     $("#dd-start").addEventListener("click", takeTrade);
     draw();
+    return c;
+  }
+
+  // The Recovery Ladder — the asymmetric math that makes the cut the trade.
+  // A -20% hole needs +25% back; a -50% hole needs +100%. Seeing the ladder
+  // climb in your own numbers is why Chapter 7 calls drawdown the real enemy.
+  function labLadder() {
+    const c = el("div", "tool-card");
+    c.innerHTML = `
+      <div class="tool-head"><span class="tool-ic">${ICONS.mountain}</span><div><h3>Recovery Ladder</h3><p class="tool-sub">What a loss really costs — the climb back up</p></div></div>
+      <div class="tool-in">
+        <label>You're down<input type="number" id="la-loss" value="20" min="1" max="90" step="1"><span class="tool-hint">% of your account lost</span></label>
+        <label>To break even<div class="out-big" id="la-need-mini">+25%</div></label>
+      </div>
+      <div class="tool-result">
+        <div class="out-big" id="la-need">+25.0% <small>to get back to even</small></div>
+        <div class="out-row"><span>Winning 1R trades needed (1:1)</span><b id="la-wins">25</b></div>
+        <div class="out-row"><span>Winning 1R trades needed (1:2)</span><b id="la-wins2">13</b></div>
+        <p class="out-hint">The deeper the hole, the steeper the climb — this is why the cut is the trade.</p>
+      </div>`;
+    const upd = () => {
+      const d = Math.max(1, Math.min(90, +c.querySelector("#la-loss").value || 20));
+      const need = d / (100 - d) * 100;
+      c.querySelector("#la-need").innerHTML = `+${need.toFixed(1)}% <small>to get back to even</small>`;
+      c.querySelector("#la-need-mini").textContent = "+" + need.toFixed(0) + "%";
+      c.querySelector("#la-wins").textContent = Math.ceil(need);
+      c.querySelector("#la-wins2").textContent = Math.ceil(need / 2);
+    };
+    c.querySelectorAll("input").forEach(i => i.addEventListener("input", upd));
+    upd();
     return c;
   }
 
@@ -2514,7 +3253,7 @@
         stage.querySelector("#cb-chase").addEventListener("click", () => {
           tilt = true;
           const st = stage;
-          st.innerHTML = `<div class="cb-tilt"><b>🧨 Revenge mode</b><p>You overrode the breaker. From here the deck is tilted against you — this is what chasing feels like in real R terms. You can still stop after any trade.</p></div><div class="cb-btns"><button class="btn-gold sm" id="cb-take">Take the next trade</button><button class="btn-ghost sm" id="cb-stop">Stop — it's enough</button></div>`;
+          st.innerHTML = `<div class="cb-tilt"><b>${ICONS.alert} Revenge mode</b><p>You overrode the breaker. From here the deck is tilted against you — this is what chasing feels like in real R terms. You can still stop after any trade.</p></div><div class="cb-btns"><button class="btn-gold sm" id="cb-take">Take the next trade</button><button class="btn-ghost sm" id="cb-stop">Stop — it's enough</button></div>`;
           st.querySelector("#cb-take").addEventListener("click", take);
           st.querySelector("#cb-stop").addEventListener("click", stop);
           upd();
@@ -2538,7 +3277,7 @@
         stage.querySelector("#cb-chase").addEventListener("click", () => {
           tilt = true;
           const st = stage;
-          st.innerHTML = `<div class="cb-tilt"><b>🧨 Revenge mode</b><p>You overrode the breaker. From here the deck is tilted against you — this is what chasing feels like in real R terms. You can still stop after any trade.</p></div><div class="cb-btns"><button class="btn-gold sm" id="cb-take">Take the next trade</button><button class="btn-ghost sm" id="cb-stop">Stop — it's enough</button></div>`;
+          st.innerHTML = `<div class="cb-tilt"><b>${ICONS.alert} Revenge mode</b><p>You overrode the breaker. From here the deck is tilted against you — this is what chasing feels like in real R terms. You can still stop after any trade.</p></div><div class="cb-btns"><button class="btn-gold sm" id="cb-take">Take the next trade</button><button class="btn-ghost sm" id="cb-stop">Stop — it's enough</button></div>`;
           st.querySelector("#cb-take").addEventListener("click", take);
           st.querySelector("#cb-stop").addEventListener("click", stop);
           upd();
@@ -2547,7 +3286,7 @@
       }
       if (wasTilt && tilt) {
         stage.innerHTML = `
-          <div class="cb-tilt"><b>🧨 Revenge mode</b><p>You overrode the breaker. From here the deck is tilted against you — this is what chasing feels like in real R terms. You can still stop after any trade.</p></div>
+          <div class="cb-tilt"><b>${ICONS.alert} Revenge mode</b><p>You overrode the breaker. From here the deck is tilted against you — this is what chasing feels like in real R terms. You can still stop after any trade.</p></div>
           <div class="cb-btns">
             <button class="btn-gold sm" id="cb-take">Take the next trade</button>
             <button class="btn-ghost sm" id="cb-stop">Stop — it's enough</button>
@@ -2598,25 +3337,25 @@
     const count = keys.size;
     const unlocked = count >= VAULT_BADGES_NEEDED;
     const missing = VAULT_BADGES_NEEDED - count;
-    const lock = unlocked ? "" : `<div class="vault-lock"><span>${ICONS.lock}</span><p>Earn <b>${missing}</b> more badge${missing === 1 ? "" : "s"} to enter. Badges are earned, not given: 80%+ for 🎖️ Honours, 100% for 💎 Flawless, a 90%+ retake for 🏆 Distinction Hunter, a fail-turned-pass for 🦁 Heart of a Lion, and your first pass for ⚔️ First Blood.</p><div class="vault-progress"><span style="width:${Math.min(100, count / VAULT_BADGES_NEEDED * 100)}%"></span></div><p class="vault-prog-t">${count}/${VAULT_BADGES_NEEDED} badges earned</p></div>`;
+    const lock = unlocked ? "" : `<div class="vault-lock"><div class="vault-lock-ic">${ICONS.lock}</div><div class="vault-lock-txt"><p>Earn <b>${missing}</b> more badge${missing === 1 ? "" : "s"} to enter. Badges are earned, not given: 80%+ for <b>Honours</b>, 100% for <b>Flawless</b>, a 90%+ retake for <b>Distinction Hunter</b>, a fail-turned-pass for <b>Heart of a Lion</b>, and your first pass for <b>First Blood</b>.</p><div class="vault-progress"><span style="width:${Math.min(100, count / VAULT_BADGES_NEEDED * 100)}%"></span></div><p class="vault-prog-t">${count}/${VAULT_BADGES_NEEDED} badges earned</p></div></div>`;
 
     root.appendChild(el("div", "vault", `
       <div class="vault-hero">
-        <div class="vault-ic">${unlocked ? ICONS.lockOpen : ICONS.lock}</div>
+        ${unlocked ? `<div class="vault-ic">${ICONS.lockOpen}</div>` : ""}
         <h2 class="gold-serif">The Academy Vault</h2>
-        <p class="vault-sub">${unlocked ? "Unlocked — reserved for the students who proved they want it more." : "The Vault holds what ordinary students never see: founder-level lessons and a network reserved for top performers."}</p>
+        <p class="vault-sub">${unlocked ? "Unlocked — reserved for the students who proved they want it more." : "The Vault holds what ordinary students never see: extra depth beyond the main course and a network reserved for top performers."}</p>
       </div>
       ${lock}
       <div class="vault-sec ${unlocked ? "" : "dim"}">
-        <div class="vault-sec-head"><span class="vault-sec-ic">${ICONS.grad}</span><div><h3>Advanced Lessons</h3><p>Founder-level material, deeper than the course itself.</p></div>${unlocked ? "" : '<span class="ni-soon">LOCKED</span>'}</div>
+        <div class="vault-sec-head"><span class="vault-sec-ic">${ICONS.grad}</span><div><h3>Advanced Lessons</h3><p>Extra depth beyond the main curriculum — the hidden gems of the Academy.</p></div>${unlocked ? "" : '<span class="ni-soon">LOCKED</span>'}</div>
         <div class="vault-grid">
-          <div class="vault-slot"><span class="vault-slot-ic">📼</span><div><b>Replay the Market</b><p>Replay real market moves and dissect the decision-making in real time.</p></div><span class="ni-soon">SOON</span></div>
+          <div class="vault-slot"><span class="vault-slot-ic">${ICONS.video}</span><div><b>Replay the Market</b><p>Replay real market moves and dissect the decision-making in real time.</p></div><span class="ni-soon">SOON</span></div>
           <div class="vault-slot"><span class="vault-slot-ic">${ICONS.book}</span><div><b>The Institutional Playbook</b><p>How institutions build, manage and defend positions — the layer above retail.</p></div><span class="ni-soon">SOON</span></div>
-          <div class="vault-slot"><span class="vault-slot-ic">🎙️</span><div><b>Live Trade Breakdowns</b><p>Recorded analyses of real setups — coming when the studio is ready.</p></div><span class="ni-soon">SOON</span></div>
+          <div class="vault-slot"><span class="vault-slot-ic">${ICONS.mic}</span><div><b>Live Trade Breakdowns</b><p>Recorded analyses of real setups — coming when the studio is ready.</p></div><span class="ni-soon">SOON</span></div>
         </div>
       </div>
       <div class="vault-sec ${unlocked ? "" : "dim"}">
-        <div class="vault-sec-head"><span class="vault-sec-ic">🤝</span><div><h3>The Recognition Circle</h3><p>Where top performers belong.</p></div>${unlocked ? '<span class="vault-tag">OPEN</span>' : '<span class="ni-soon">LOCKED</span>'}</div>
+        <div class="vault-sec-head"><span class="vault-sec-ic">${ICONS.users}</span><div><h3>The Recognition Circle</h3><p>Where top performers belong.</p></div>${unlocked ? '<span class="vault-tag">OPEN</span>' : '<span class="ni-soon">LOCKED</span>'}</div>
         <div class="vault-body">
           <p>Students who perform at badge level earn their place in the Recognition Circle — a private group of the Academy's highest-achieving traders, where you network with the peers who take this as seriously as you do.</p>
           <p><b>And the door doesn't stop at the network.</b> Circle members who pursue employment after graduating hold an express pass: direct recognition from the Reality FX board and genuine consideration for roles inside the company. It is rare — the course proves you are the one for the job; the interview confirms you fit our system. But it is real, and it is yours to reach for.</p>
@@ -2647,7 +3386,7 @@
     const xp = S.xp, rank = rankFor(S.xp);
     const certKeys = [...earnedBadgeKeys()];
     const certBadges = certKeys.length
-      ? `<div class="cert-badge-row"><p class="cert-label">Earned badges</p><div>${certKeys.map(k => `<span class="cert-badge" title="${esc(BADGES[k].name)}">${BADGES[k].icon}</span>`).join("")}</div></div>`
+      ? `<div class="cert-badge-row"><p class="cert-label">Earned badges</p><div>${certKeys.map(k => `<span class="cert-badge" title="${esc(BADGES[k].name)}">${badgeIc(k)}</span>`).join("")}</div></div>`
       : "";
     root.appendChild(el("div", "cert-wrap", `
       <div class="cert">
@@ -2702,11 +3441,14 @@
     if (burger) burger.addEventListener("click", () => document.querySelector(".sidebar").classList.toggle("open"));
     startSessionClock(); // live session timer begins the moment the academy opens
     checkTimeBadges();    // credit any time-in-the-game badges already banked from earlier sessions
+    captureAcademyBase(); // remember where the student came from (demo: the member panel's origin)
     // Handshake with System A: greet a verified student by identity (from
     // ?sid=) when the handoff store is reachable; otherwise stay a local demo.
     loadHandshake().then(function () {
       save();
       route();
+      wireAcademyLinks(); // the return trip: My RFX Account + Reception (verified students only)
+      startAcademyHealth(); // stale-server check — is the academy link live, stale or unreachable?
       initSessionGuard(); // single-session guard — only acts when verified
       flagsSync();        // push any integrity flags raised since the last report
     });

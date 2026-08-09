@@ -7,14 +7,14 @@
 <meta name="description" content="The interactive trading academy by Reality FX. Every lesson is a trade. Every trade is a lesson.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/os.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐂</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect x='14' y='32' width='22' height='36' rx='4' fill='none' stroke='%23D4AF37' stroke-width='6'/><line x1='25' y1='20' x2='25' y2='80' stroke='%23D4AF37' stroke-width='6' stroke-linecap='round'/><rect x='58' y='44' width='22' height='32' rx='4' fill='%23D4AF37'/><line x1='69' y1='34' x2='69' y2='86' stroke='%23D4AF37' stroke-width='6' stroke-linecap='round'/></svg>">
 </head>
 <body>
 
 <div class="topbar">
-  <button id="burger" aria-label="Menu">☰</button>
+  <button id="burger" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
   <span class="brand-serif">Reality FX</span><span class="brand-os">OS</span>
 </div>
 
@@ -27,6 +27,11 @@
 
     <nav class="nav">
       <a class="nav-item" data-route="profile"><span class="ni-ic" data-icon="user"></span>My Profile</a>
+      <div class="nav-gap" hidden></div>
+      <a class="nav-item academy-link" data-academy="member" href="#" hidden title="My RFX Account — identity, wallet, invoice & RFX OS access"><span class="ni-ic" data-icon="card"></span>My RFX Account</a>
+      <a class="nav-item academy-link" data-academy="reception" href="#" hidden title="Reception — the front doors of Reality FX"><span class="ni-ic" data-icon="door"></span>Reception</a>
+      <div class="academy-health" hidden><span class="ah-dot"></span><span class="ah-text">Checking academy link…</span></div>
+      <div class="nav-gap"></div>
       <a class="nav-item active" data-route=""><span class="ni-ic" data-icon="home"></span>Dashboard</a>
       <a class="nav-item" data-route="map"><span class="ni-ic" data-icon="map"></span>Journey</a>
       <a class="nav-item" data-route="progress"><span class="ni-ic" data-icon="chart"></span>Performance</a>
@@ -36,7 +41,7 @@
       <a class="nav-item" data-route="vault"><span class="ni-ic" data-icon="key"></span>Academy Vault</a>
       <a class="nav-item"><span class="ni-ic" data-icon="pen"></span>Trade Journal<span class="ni-soon">SOON</span></a>
       <a class="nav-item" data-route="lab"><span class="ni-ic" data-icon="flask"></span>Laboratory</a>
-      <a class="nav-item"><span class="ni-ic" data-icon="robot"></span>AI Mentor<span class="ni-soon">SOON</span></a>
+      <a class="nav-item" data-route="mentor"><span class="ni-ic" data-icon="robot"></span>AI Mentor</a>
     </nav>
 
     <div class="side-foot">
@@ -55,6 +60,7 @@
 
 <script src="js/data.js"></script>
 <script src="js/icons.js"></script>
+<script src="js/mentor.js"></script>
 <script src="js/os.js"></script>
 </body>
 </html>
