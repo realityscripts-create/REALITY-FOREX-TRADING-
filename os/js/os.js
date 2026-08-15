@@ -1615,6 +1615,28 @@
     }
   }
 
+  /* ---------- PWA install affordance ----------
+     The sidebar shows "Install app" only when the device can actually
+     install: Android/Chrome/Edge announce it (rfx:pwa-installable), iOS
+     never does so the button teaches Share → Add to Home Screen instead,
+     and an already-installed Academy hides it entirely. The heavy lifting
+     lives in /rfx-pwa/register.js — the OS only knows the three hooks. */
+  function wirePwaInstall() {
+    const btn = document.getElementById("appInstallBtn");
+    if (!btn) return;
+    btn.hidden = true;
+    if (!window.RFXInstallApp) return;                          // no PWA layer — nothing to offer
+    if (window.RFXIsPwaInstalled && RFXIsPwaInstalled()) return; // already installed (or standalone)
+    if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") return;
+    const show = () => { btn.hidden = false; };
+    window.addEventListener("rfx:pwa-installable", show);
+    window.addEventListener("rfx:pwa-installed", () => { btn.hidden = true; });
+    // iOS can't fire beforeinstallprompt — the button opens the Share → Add
+    // to Home Screen hint (dispatched by RFXInstallApp on iOS).
+    if (/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) show();
+    btn.addEventListener("click", () => { try { window.RFXInstallApp(); } catch (e) {} });
+  }
+
   /* ---------- Router ---------- */
   function updateCertNav() {
     const ready = CHAPTERS.every(isComplete);
@@ -6016,6 +6038,7 @@
     checkTimeBadges();    // credit any time-in-the-game badges already banked from earlier sessions
     captureAcademyBase(); // remember where the student came from (demo: the member panel's origin)
     applySoftLight();     // restore the student's yellow light mode without a flash
+    wirePwaInstall();     // the sidebar Install app button — only when the device can install
     // Handshake with System A: greet a verified student by identity (from
     // ?sid=) when the handoff store is reachable; otherwise stay a local demo.
     loadHandshake().then(function () {

@@ -331,6 +331,17 @@ body.nav-open { overflow: hidden; }
 .rank-note { margin-top: 10px; font-size: 11.5px; color: var(--text-dim); line-height: 1.5; max-width: 340px; }
 
 .side-foot { border-top: 1px solid var(--glass-border); padding-top: 18px; }
+.app-install-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  margin-top: 12px; width: 100%; cursor: pointer; font-family: inherit;
+  font-size: 10.5px; letter-spacing: 1.2px; text-transform: uppercase; font-weight: 700;
+  color: var(--accent-gold-light); background: rgba(212,175,55,.06);
+  border: 1px solid rgba(212,175,55,.35); border-radius: 30px;
+  height: 26px; padding: 0 12px; white-space: nowrap;
+  transition: border-color .25s ease, background .25s ease, transform .25s ease;
+}
+.app-install-btn:hover { border-color: rgba(212,175,55,.7); background: rgba(212,175,55,.12); transform: translateY(-1px); }
+.app-install-btn .ni-ic { display: inline-flex; }
 .side-rank { display: flex; align-items: center; gap: 12px; }
 .side-rank .rank-ic { font-size: 26px; }
 .side-rank .rank-name { font-family: var(--font-heading); font-size: 15px; color: var(--accent-gold-light); }
