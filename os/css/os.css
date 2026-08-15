@@ -204,6 +204,11 @@ body.nav-open { overflow: hidden; }
 .profile-fields input:focus { outline: none; border-color: rgba(212,175,55,.55); box-shadow: 0 0 0 3px rgba(212,175,55,.12); }
 .profile-actions { display: flex; align-items: center; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
 .profile-note { font-size: 11.5px; color: var(--text-dim); margin: 0; max-width: 320px; line-height: 1.5; }
+.profile-privacy { max-width: 620px; margin-top: 18px; }
+.profile-privacy .page-sub { margin: 8px 0 16px; }
+.profile-privacy-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.profile-privacy-actions .btn-ghost.sm { height: 30px; }
+.profile-privacy #pf-data-status { max-width: 460px; }
 .name-edit-link { display: inline-block; margin-left: 8px; font-size: 11.5px; color: var(--accent-gold-light); text-decoration: none; }
 .name-edit-link:hover { text-decoration: underline; }
 

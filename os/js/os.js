@@ -3679,6 +3679,57 @@
       </div>`;
     root.appendChild(card);
 
+    /* Privacy & your data — the student's data-rights rail. A request for a
+       copy or a deletion is filed to the academy server's /api/data-requests
+       board (the same rail Staff read), and the reference number is the
+       receipt. This is what makes the "you can ask us to delete your data"
+       promise a real action, not a policy sentence. */
+    const pr = el("div", "panel profile-privacy");
+    const lastReq = p.lastDataRequest;
+    pr.innerHTML = `
+      <p class="quiz-tag">Privacy &amp; your data</p>
+      <h3 class="gold-serif">Your data is yours</h3>
+      <p class="page-sub">Reality FX never sells your data and never collects government IDs. Your records live in the protected student environment — encrypted in transit, access-logged, and visible only to authorised staff for legitimate institutional purposes. You can ask for a copy of everything we hold, or ask us to close your account and remove your records.</p>
+      <div class="profile-privacy-actions">
+        <button class="btn-ghost sm" id="pf-data-export"><span class="btn-ic">${ICONS.download}</span> Request a copy of my data</button>
+        <button class="btn-ghost sm danger" id="pf-data-delete">Request account deletion</button>
+      </div>
+      <p class="profile-note" id="pf-data-status">${lastReq
+        ? `Last request: <b>${esc(lastReq.ref)}</b> — ${lastReq.kind === "delete" ? "account deletion" : "a copy of your data"}, filed ${new Date(lastReq.at).toLocaleString()}.`
+        : "No data requests filed yet — every request is recorded with a reference number."}</p>`;
+    function fileDataRequest(kind) {
+      const nm = (profile().name || "").trim() || (S.name || "").trim() || "OS student";
+      const em = (profile().email || "").trim();
+      const hoff = handoffRec();
+      const body = { kind: kind, name: nm, email: em, studentId: hoff ? hoff.studentId : "" };
+      const label = kind === "delete" ? "account deletion" : "a copy of your data";
+      const btn = pr.querySelector(kind === "delete" ? "#pf-data-delete" : "#pf-data-export");
+      if (btn) btn.disabled = true;
+      fetch("api/data-requests", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body), cache: "no-store" })
+        .then(r => r.ok ? r.json() : Promise.reject(r.status))
+        .then(j => {
+          if (btn) btn.disabled = false;
+          const pp = profile();
+          pp.lastDataRequest = { ref: j.ref, kind: kind, at: Date.now() };
+          save();
+          const st = document.getElementById("pf-data-status");
+          if (st) st.innerHTML = `Filed — reference <b>${esc(j.ref)}</b>. The Registrar will action your request for ${label}.`;
+          toast("Request filed — reference " + j.ref, "ok");
+        })
+        .catch(() => {
+          if (btn) btn.disabled = false;
+          toast("Could not reach the academy server — please try again shortly", "warn");
+        });
+    }
+    const btnExport = pr.querySelector("#pf-data-export");
+    const btnDelete = pr.querySelector("#pf-data-delete");
+    if (btnExport) btnExport.addEventListener("click", () => fileDataRequest("export"));
+    if (btnDelete) btnDelete.addEventListener("click", () => {
+      if (!confirm("This files a request to close your Reality FX account and remove your records. Nothing is deleted instantly — the Registrar reviews every request, and you can change your mind before it is processed. Continue?")) return;
+      fileDataRequest("delete");
+    });
+    root.appendChild(pr);
+
     // Photo upload — resize on a canvas (240px JPEG) so the portrait stays
     // light in local storage, then render it straight into the avatar.
     function readPhoto(file) {
