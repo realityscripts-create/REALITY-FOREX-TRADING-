@@ -1712,6 +1712,8 @@
       else renderLesson(viewEl, parseInt(parts[1], 10), null, true); // read-only revision mode
     }
     else if (view === "certificate") renderCertificate(viewEl);
+    else if (view === "exam") renderExam(viewEl);
+    else if (view === "workshop") renderWorkshops(viewEl);
     else if (view === "vault") renderVault(viewEl);
     else if (view === "guide") renderGuide(viewEl);
     // The Machine Audit is the founder's inspection room — the nav hides it,
@@ -1778,6 +1780,8 @@
       { ic: ICONS.flame, t: "The Trading Challenge", b: "The arena: simulated accounts, institutional rules, and a machine that grades ability, not just profit. Enter a challenge, trade the live feed and the market chart, and the machine measures risk, drawdown, consistency and discipline. Pass, and the reward is machine-signed — a badge and RFX credit paid straight to your wallet. No real money ever touches this floor." },
       { ic: ICONS.moon, t: "The Break Room", b: "A real break, not a tab-switch: a quiet room to unwind between sessions — a nudge after heavy assessments and a place to let a long study session settle. It is chat-safe too: the guard politely refuses phone numbers, addresses and passwords, because staff never ask for those in chat." },
       { ic: ICONS.pen, t: "The Trade Journal", b: "The trader's mirror: log every trade you take — pair, direction, entry, exit, stop, the setup and how you felt while holding it. The machine computes pips, P/L and the R multiple as you type, and the stats rail reads the pattern your memory politely edits. Local-only by design: your journal lives on this device and never leaves it." },
+      { ic: ICONS.note, t: "The Final Examination", b: "The certificate's last door: one paper across all thirteen chapters, drawn fresh from the decks you studied, timed in hours, forward-only, machine-graded. Pass at 70% and the certificate is yours. It can also be run as a live, proctored workshop — same paper, same standard, the room is the difference." },
+      { ic: ICONS.zap, t: "Workshops", b: "The hands-on wing: practical sessions that turn theory into habits. The Risk Workshop makes the 1% rule a reflex, the Psychology Workshop names the ways traders self-destruct, the Journal Workshop wires the habit of logging every trade — each one a principle, a real task, and a check that the skill landed. 25 XP per workshop." },
       { ic: ICONS.clock, t: "The Study Hall", b: "The Academy's always-open room — students gather, share the journey and keep each other pushing. Same rules as every room: one identity, honest chat, and the PII guard watching the door so nothing sensitive is ever posted." },
       { ic: ICONS.quill, t: "The Story", b: "How this OS was actually built — the sleepless nights, the code that broke, the ideas that looked brilliant at midnight and were wrong by morning. It is the honest version of what you're standing in: the confusion and the frustration happened here, in the build, so they never have to happen in your session." },
       { ic: ICONS.grad, t: "The certificate", b: "Finish every chapter, pass every assessment and the final exams, and the certificate is yours — your verified name, your Student ID, drawn in gold. It prints only for students who earned print trust. A certificate from Reality FX means you did the work." },
@@ -3180,23 +3184,27 @@
     const cont = nextLesson();
     const recs = cont ? [] : recommendChapters();
     const rec = recs[0] || null;
+    const allChaptersDone = CHAPTERS.every(isComplete);
     // Reflection pause: if the only unfinished chapter is locked behind its
     // reflection window, say so instead of falling through to the certificate
     // CTA — a 0% student must never be offered a certificate.
     const paused = (!cont && !rec) ? CHAPTERS.find(c => isUnlocked(c) && !isComplete(c) && retryLocked(c) > 0) : null;
     const cta = cont
       ? `<button class="btn-gold" data-go="${cont.id}">Continue — ${esc(cont.title)}</button>`
-      : rec
-        ? `<button class="btn-gold" data-go="${rec.ch.id}">Practice — ${esc(rec.ch.title)}</button>
-           <p class="dash-cta-sub">${esc(rec.reason)}</p>`
-        : paused
-          ? `<button class="btn-gold" data-go="review-${paused.id}">Review — ${esc(paused.title)}</button>
-             <p class="dash-cta-sub">Reflection period — your retake unlocks in ${fmtLock(retryLocked(paused))}. Re-reading is the fastest way back to a pass.</p>`
-          : `<div class="dash-cta-row">
-             <button class="btn-gold" data-go="cert">Claim your certificate</button>
-             <button class="btn-ghost" data-go="progress">Insights</button>
-           </div>
-           <p class="dash-cta-sub">Every chapter complete. Collect what you earned — and keep sharpening while you're here.</p>`;
+      : paused
+        ? `<button class="btn-gold" data-go="review-${paused.id}">Review — ${esc(paused.title)}</button>
+           <p class="dash-cta-sub">Reflection period — your retake unlocks in ${fmtLock(retryLocked(paused))}. Re-reading is the fastest way back to a pass.</p>`
+        : rec && !allChaptersDone
+          ? `<button class="btn-gold" data-go="${rec.ch.id}">Practice — ${esc(rec.ch.title)}</button>
+             <p class="dash-cta-sub">${esc(rec.reason)}</p>`
+          : !examPassed()
+            ? `<button class="btn-gold" data-go="exam">Begin the Final Examination</button>
+               <p class="dash-cta-sub">Every chapter complete. One last door: pass the Final Examination (${EXAM_PASS}% or better) and the certificate is yours.</p>`
+            : `<div class="dash-cta-row">
+               <button class="btn-gold" data-go="cert">Claim your certificate</button>
+               <button class="btn-ghost" data-go="progress">Insights</button>
+             </div>
+             <p class="dash-cta-sub">Every chapter complete and the Final Examination passed. Collect what you earned — and keep sharpening while you're here.</p>`;
 
     // accuracy ring — correct answers across every logged attempt
     let accN = 0, accW = 0;
@@ -3262,7 +3270,7 @@
     `));
     root.querySelectorAll(".dash-cta [data-go]").forEach(go => go.addEventListener("click", () => {
       const t = go.dataset.go;
-      location.hash = t === "cert" ? "#/certificate" : t === "progress" ? "#/progress" : t.indexOf("review-") === 0 ? "#/review/" + t.slice(7) : "#/lesson/" + t;
+      location.hash = t === "cert" ? "#/certificate" : t === "progress" ? "#/progress" : t === "exam" ? "#/exam" : t.indexOf("review-") === 0 ? "#/review/" + t.slice(7) : "#/lesson/" + t;
     }));
 
     // Live now — a compact strip so the Academy's broadcasts are never missed.
@@ -3950,6 +3958,31 @@
       if (unlocked) node.querySelector(".j-go").addEventListener("click", () => location.hash = lock > 0 ? "#/review/" + ch.id : "#/lesson/" + ch.id);
       path.appendChild(node);
     });
+    // The capstone — the Final Examination is the journey's last door, drawn
+    // here as the final node: locked until every chapter passes, then it
+    // becomes the certificate's last gate. The exam room stays reachable
+    // from the nav too — this is simply the journey's honest ending.
+    const allChDone = CHAPTERS.every(isComplete);
+    const examDone = examPassed();
+    const eBest = examBest();
+    const cap = el("div", "j-node capstone" + (examDone ? " done" : "") + (allChDone ? " open" : " locked"), `
+        <div class="j-dot">${examDone ? "✓" : `${ICONS.note}`}</div>
+        <div class="j-card ${allChDone ? "" : "j-dim"}">
+          <div class="j-top"><span class="j-num">Capstone</span><span class="j-status">${examDone ? "Passed · " + eBest.pct + "%" : allChDone ? "Ready" : "Locked"}</span></div>
+          <h3 class="gold-serif">The Final Examination</h3>
+          <p class="j-focus">Every chapter, one paper — ${CHAPTERS.length * 6} questions drawn fresh across all ${CHAPTERS.length} chapters, timed in hours, one-way, machine-graded. The certificate's last door.</p>
+          <div class="j-meta">
+            <span>${CHAPTERS.length * 6} questions</span>
+            <span>${Math.floor(EXAM_MINUTES / 60)}h ${EXAM_MINUTES % 60}m</span>
+            <span>pass ${EXAM_PASS}%</span>
+            ${examDone ? `<span class="j-best">best ${eBest.pct}%</span>` : ""}
+          </div>
+          ${!allChDone
+            ? `<button class="btn-lock" disabled>Complete all ${CHAPTERS.length} chapters first</button>`
+            : `<button class="btn-gold j-go" data-go="exam">${examDone ? "Re-sit the examination" : "Begin the Final Examination"}</button>`}
+        </div>`);
+    if (allChDone) cap.querySelector(".j-go").addEventListener("click", () => location.hash = "#/exam");
+    path.appendChild(cap);
     root.appendChild(path);
   }
 
@@ -5361,8 +5394,9 @@
     root.appendChild(el("div", "page-head", `
       <p class="eyebrow">Laboratory</p>
       <h2>The Risk Laboratory</h2>
-      <p class="page-sub">Practise the exact formulas from Chapter 7 — position sizing, R-multiples, and drawdown recovery. No real money required. This is where theory becomes instinct.</p>`));
+      <p class="page-sub">Practise the exact formulas from Chapter 7 — position sizing, the 1% rule, R-multiples, and drawdown recovery. No real money required. This is where theory becomes instinct.</p>`));
     const grid = el("div", "lab-grid");
+    grid.appendChild(labRiskChecker());   // the 1% rule, made concrete — the question students ask most
     grid.appendChild(labPositionSizer());
     grid.appendChild(labRRPlanner());
     grid.appendChild(labOutcomeR());
@@ -5371,6 +5405,56 @@
     grid.appendChild(labLadder());
     root.appendChild(grid);
     root.appendChild(el("p", "lab-note", "Pip values vary by pair — EUR/USD ≈ $10 per standard lot, USD/JPY and others differ. Always confirm with your broker."));
+  }
+
+  /* The 1% Risk Checker — the machine answers the question every student
+     asks: "is THIS trade 1%, 2% or 10%?" Feed it your account size, entry,
+     stop, take-profit and position size, and it computes the exact money at
+     risk, the percentage of your account, the verdict on the 1% rule, and
+     the reward-to-risk your plan is actually offering. */
+  function labRiskChecker() {
+    const c = el("div", "tool-card");
+    c.innerHTML = `
+      <div class="tool-head"><span class="tool-ic">${ICONS.shield}</span><div><h3>1% Risk Checker</h3><p class="tool-sub">Is this trade within the 1% rule? The machine does the arithmetic.</p></div></div>
+      <div class="tool-in">
+        <label>Account size ($)<input type="number" id="rc-bal" value="10000" min="0" step="100"></label>
+        <label>Position size (units)<input type="number" id="rc-units" value="10000" min="0" step="100"><span class="tool-hint">1 standard lot = 100,000 units · 0.10 lot = 10,000 units</span></label>
+        <label>Entry price<input type="number" id="rc-entry" value="1.1000" step="0.0001"></label>
+        <label>Stop loss<input type="number" id="rc-stop" value="1.0950" step="0.0001"></label>
+        <label>Take profit<input type="number" id="rc-target" value="1.1200" step="0.0001"></label>
+        <label>Direction<select id="rc-side"><option value="long">Long (buy)</option><option value="short">Short (sell)</option></select></label>
+      </div>
+      <div class="tool-result" id="rc-result"><span class="dim">Enter your trade — the verdict updates live</span></div>`;
+    const upd = () => {
+      const bal = Math.max(0, +c.querySelector("#rc-bal").value || 0);
+      const units = Math.max(0, +c.querySelector("#rc-units").value || 0);
+      const e = Math.max(0, +c.querySelector("#rc-entry").value || 0);
+      const s = Math.max(0, +c.querySelector("#rc-stop").value || 0);
+      const t = Math.max(0, +c.querySelector("#rc-target").value || 0);
+      const side = c.querySelector("#rc-side").value;
+      const res = c.querySelector("#rc-result");
+      const riskPer = side === "long" ? e - s : s - e;
+      const rewPer = side === "long" ? t - e : e - t;
+      if (!bal || !units || !e || riskPer <= 0) {
+        res.innerHTML = `<span class="dim">${riskPer <= 0 && e ? "Stop sits on the wrong side of entry for a " + side + " — flip the stop or the direction." : "Enter your trade — the verdict updates live"}</span>`;
+        return;
+      }
+      const risk$ = riskPer * units;
+      const riskPct = risk$ / bal * 100;
+      const within = riskPct <= 1;
+      const rr = rewPer > 0 ? Math.abs(rewPer) / Math.abs(riskPer) : 0;
+      const maxUnits = riskPer > 0 ? Math.floor(bal * 0.01 / riskPer) : 0;
+      res.innerHTML = `
+        <div class="out-big ${within ? "good" : "warn"}">${riskPct.toFixed(2)}% <small>of your account at risk</small></div>
+        <div class="out-row"><span>Money at risk</span><b>$${risk$.toFixed(2)}</b></div>
+        <div class="out-row"><span>Reward : risk</span><b>${rr > 0 ? "1 : " + rr.toFixed(2) : "—"}</b></div>
+        <div class="out-row"><span>Max size within 1%</span><b>${maxUnits.toLocaleString()} units</b></div>
+        ${within ? "<div class='warn-note' style='border-color:rgba(80,180,110,.35);background:rgba(80,180,110,.08);color:#9fe3bd'>✓ Within the 1% rule. The machine approves this size.</div>" : `<div class="warn-note">This trade risks ${riskPct.toFixed(1)}% of your account — over the 1% rule. Size down to ${maxUnits.toLocaleString()} units (or cut the stop distance) to bring it inside.</div>`}`;
+    };
+    c.querySelectorAll("input").forEach(i => i.addEventListener("input", upd));
+    c.querySelector("#rc-side").addEventListener("change", upd);
+    upd();
+    return c;
   }
 
   function labPositionSizer() {
@@ -5964,14 +6048,18 @@
 
   function renderCertificate(root) {
     const pct = progressPct();
-    if (pct < 100) {
+    const exam = examPassed();
+    if (pct < 100 || !exam) {
+      const chLeft = 13 - CHAPTERS.filter(isComplete).length;
       root.appendChild(el("div", "cert-locked", `
         <div class="finish-ic">${ICONS.lockOpen}</div>
         <h2 class="gold-serif">Your certificate awaits</h2>
-        <p>Complete all 13 chapters — ${13 - CHAPTERS.filter(isComplete).length} remaining — to unlock your Reality FX Academy certificate.</p>
+        <p>${pct < 100
+          ? `Complete all 13 chapters — ${chLeft} remaining — then pass the Final Examination to unlock your Reality FX Academy certificate.`
+          : `Every chapter is complete. One last door: pass the Final Examination (${EXAM_PASS}% or better) and the certificate is yours.`}</p>
         <div class="cert-progress big"><span style="width:${pct}%"></span></div>
-        <button class="btn-gold" data-go="map">Back to the journey</button>`));
-      root.querySelector("[data-go]").addEventListener("click", () => location.hash = "#/map");
+        <button class="btn-gold" data-go="${pct < 100 ? "map" : "exam"}">${pct < 100 ? "Back to the journey" : "Begin the Final Examination"}</button>`));
+      root.querySelector("[data-go]").addEventListener("click", () => location.hash = pct < 100 ? "#/map" : "#/exam");
       return;
     }
     const name = profileName() || "Reality FX Student";
@@ -5997,7 +6085,7 @@
         <div class="cert-underline"></div>
         <p class="cert-sub cursive">has successfully completed the</p>
         <h3 class="cert-course">Reality Forex Trading Course</h3>
-        <p class="cert-course-sub">The RFX Full Course — 13 Chapters · ${xp} XP · Rank: ${rank.name}</p>
+        <p class="cert-course-sub">The RFX Full Course — 13 Chapters · ${xp} XP · Rank: ${rank.name}${examPassed() ? " · Final Examination: passed" : ""}</p>
         ${certBadges}
         <p class="cert-line">“${esc(QUOTE)}”</p>
         <div class="cert-foot">
@@ -6026,6 +6114,437 @@
     const s = (name || "student").toUpperCase() + "-RFX13";
     for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
     return "RFX-" + h.toString(16).toUpperCase().slice(0, 8);
+  }
+
+  /* ============================================================
+     THE FINAL EXAMINATION — the capstone of the whole course.
+     One paper across all thirteen chapters, drawn live from the real
+     decks, timed in hours, one-way, machine-graded. The certificate's
+     last gate: finish every chapter, then sit the exam. It can also be
+     run as a live, proctored workshop — same paper, same pass mark,
+     the room is the difference.
+     ============================================================ */
+  const EXAM_MINUTES = 150; // 2h 30m — an exam that takes hours
+  const EXAM_PASS = 70;     // pass mark, in percent
+  function shuf(a) {
+    const r = a.slice();
+    for (let i = r.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = r[i]; r[i] = r[j]; r[j] = t;
+    }
+    return r;
+  }
+  function examDeck(ch, lane) {
+    const base = (ch.quiz || []).filter(q => q && q.q);
+    if (lane === "standard") return base;
+    const deep = composeTier(ch, lane) || ch[lane] || null;
+    const extra = (deep && deep.quiz ? deep.quiz : []).filter(q => q && q.q);
+    return base.concat(extra);
+  }
+  function buildExamPaper() {
+    const lane = tierKey();
+    const per = CHAPTERS.map(ch => ({
+      ch: ch.id, title: ch.title,
+      qs: shuf(examDeck(ch, lane)).slice(0, 6)
+    }));
+    const paper = [];
+    per.forEach(b => b.qs.forEach(q => paper.push({ ch: b.ch, q: q })));
+    return { paper, per, lane };
+  }
+  function examBest() {
+    const fe = S.finalExam || {};
+    return fe.best || null;
+  }
+  function examPassed() {
+    const b = examBest();
+    return !!(b && b.pass);
+  }
+  function renderExam(root) {
+    // The gate: the final examination is the certificate's last door.
+    if (progressPct() < 100) {
+      root.appendChild(el("div", "exam-gate", `
+        <div class="finish-ic">${ICONS.note}</div>
+        <h2 class="gold-serif">The Final Examination</h2>
+        <p>One paper. Every chapter — 1 through 13 — drawn live from the decks you actually studied. Timed in hours, one-way, machine-graded. The certificate's last gate: ${13 - CHAPTERS.filter(isComplete).length} chapter${13 - CHAPTERS.filter(isComplete).length === 1 ? "" : "s"} still stand between you and the exam hall.</p>
+        <div class="cert-progress big"><span style="width:${progressPct()}%"></span></div>
+        <button class="btn-gold" data-go="map">Back to the journey</button>`));
+      root.querySelector("[data-go]").addEventListener("click", () => location.hash = "#/map");
+      return;
+    }
+    const run = S.finalExamRun;
+    if (run && run.deadline && new Date(run.deadline).getTime() > Date.now()) { examLive(root, run); return; }
+    const best = examBest();
+    const paper = buildExamPaper();
+    const n = paper.paper.length;
+    const past = S.finalExam && S.finalExam.attempts ? S.finalExam.attempts : [];
+    root.appendChild(el("div", "page-head", `
+      <p class="eyebrow">Reality FX OS · the capstone</p>
+      <h1 class="page-title">The Final Examination</h1>
+      <p class="page-sub">Every chapter, one paper. ${n} questions drawn live from all 13 chapters in your lane — timed in hours, one-way, machine-graded. This is the certificate's last door.</p>`));
+    root.appendChild(el("div", "exam-intro", `
+      <div class="exam-intro-grid">
+        <div class="exam-intro-stat"><b>${n}</b><span>Questions</span></div>
+        <div class="exam-intro-stat"><b>${EXAM_MINUTES} min</b><span>${Math.floor(EXAM_MINUTES / 60)}h ${EXAM_MINUTES % 60}m — the clock never pauses</span></div>
+        <div class="exam-intro-stat"><b>${EXAM_PASS}%</b><span>Pass mark</span></div>
+        <div class="exam-intro-stat"><b>13/13</b><span>Chapters covered</span></div>
+      </div>
+      <div class="exam-rules">
+        <p><b>How it works.</b> Six questions per chapter, every chapter — a full sweep of the course. Answer forward-only: once you move on, a question is done. ${EXAM_MINUTES} minutes on the clock, and when it reaches zero the paper submits itself. ${past.length ? "You've sat " + past.length + (past.length === 1 ? " paper" : " papers") + " before — the best result stands." : "First sitting — make it count."}</p>
+        <p><b>Honesty built in.</b> The paper is drawn fresh every sitting, the clock never pauses for a tab-switch, and the machine grades the answers — no human second-guessing. Pass at ${EXAM_PASS}% and the certificate is yours.</p>
+      </div>
+      <div class="exam-cta">
+        <button class="btn-gold" id="examStart">${ICONS.note} Begin the Final Examination</button>
+        <p class="exam-note">The same paper runs as a live, proctored workshop — the room is the difference, the standard is not.</p>
+      </div>`));
+    if (best) root.appendChild(el("div", "exam-best", `
+      <div class="exam-best-in">
+        <div class="exam-best-ic">${best.pass ? ICONS.check : ICONS.alert}</div>
+        <div><b>Best result: ${best.pct}%${best.pass ? " · passed" : " · not yet"}</b>
+        <p>${best.pass ? "The certificate door is open — collect it in the Certificate room." : "Keep studying, then sit it again — the best result is the one that counts."}</p></div>
+      </div>`));
+    root.querySelector("#examStart").addEventListener("click", function () {
+      const paper2 = buildExamPaper();
+      S.finalExamRun = { paper: paper2.paper, per: paper2.per, lane: paper2.lane, answers: [], cur: 0, deadline: new Date(Date.now() + EXAM_MINUTES * 60000).toISOString() };
+      save();
+      examLive(root, S.finalExamRun);
+    });
+  }
+  function examLive(root, run) {
+    root.innerHTML = "";
+    const deadline = new Date(run.deadline).getTime();
+    const total = run.paper.length;
+    const chNames = {};
+    (run.per || []).forEach(p => chNames[p.ch] = p.title);
+    const qSel = (i) => { const a = run.answers[i]; return (a === undefined || a === null) ? -1 : a; };
+    const saveRun = function () { S.finalExamRun = run; save(); };
+    const paint = function () {
+      root.innerHTML = `
+        <div class="exam-hud">
+          <div class="exam-hud-l"><span class="exam-hud-ic">${ICONS.note}</span><div><b>Final Examination</b><span>${Math.round(100 * run.answers.filter(a => a !== undefined && a !== null).length / total)}% answered</span></div></div>
+          <div class="exam-hud-dots">${run.paper.map((_, i) => `<i class="${qSel(i) >= 0 ? "done" : ""}"></i>`).join("")}</div>
+          <div class="exam-hud-t"><span class="exam-clock" id="examClock"></span><span>Question ${run.cur + 1} of ${total}</span></div>
+        </div>
+        <div class="exam-q">
+          <p class="eyebrow">Chapter ${run.paper[run.cur].ch} · ${esc(chNames[run.paper[run.cur].ch] || "")}</p>
+          <h3 class="gold-serif">${esc(run.paper[run.cur].q.q)}</h3>
+          <div class="exam-options">${run.paper[run.cur].q.options.map((o, oi) => `<button class="exam-opt${qSel(run.cur) === oi ? " on" : ""}" data-oi="${oi}">${esc(o)}</button>`).join("")}</div>
+          <div class="exam-nav">${run.cur < total - 1
+            ? `<button class="btn-gold" id="examNext" ${qSel(run.cur) < 0 ? "disabled" : ""}>${ICONS.check} Next question</button>`
+            : `<button class="btn-gold" id="examNext" ${qSel(run.cur) < 0 ? "disabled" : ""}>${ICONS.check} Submit the examination</button>`}
+            <span class="exam-hint">${qSel(run.cur) < 0 ? "Choose an answer to continue — forward only, no going back." : run.cur < total - 1 ? "Forward only — your answer is locked once you move on." : "Last question — submitting ends the paper."}</span>
+          </div>
+        </div>`;
+      const t0 = Date.now();
+      const tick = function () {
+        const left = Math.max(0, deadline - Date.now());
+        const m = Math.floor(left / 60000), s = Math.floor(left / 1000) % 60;
+        const cl = root.querySelector("#examClock");
+        if (cl) { cl.textContent = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0"); cl.classList.toggle("low", left < 300000); }
+        if (left <= 0) { clearInterval(iv); examSubmit(); }
+      };
+      const iv = setInterval(tick, 1000); tick();
+      root.__examIv = iv;
+      root.querySelectorAll(".exam-opt").forEach(b => b.addEventListener("click", function () {
+        run.answers[run.cur] = parseInt(this.getAttribute("data-oi"), 10);
+        saveRun();
+        paint();
+      }));
+      const nx = root.querySelector("#examNext");
+      if (nx) nx.addEventListener("click", function () {
+        if (qSel(run.cur) < 0) return;
+        if (run.cur < total - 1) { run.cur++; saveRun(); paint(); }
+        else examSubmit();
+      });
+    };
+    const examSubmit = function () {
+      if (root.__examIv) { clearInterval(root.__examIv); root.__examIv = null; }
+      let correct = 0;
+      const perCh = {};
+      run.paper.forEach((p, i) => {
+        const ok = qSel(i) === p.q.answer;
+        if (ok) correct++;
+        perCh[p.ch] = perCh[p.ch] || { c: 0, t: 0 };
+        perCh[p.ch].t++;
+        if (ok) perCh[p.ch].c++;
+      });
+      const pct = Math.round(100 * correct / total);
+      const pass = pct >= EXAM_PASS;
+      const att = { at: new Date().toISOString(), total: total, correct: correct, pct: pct, pass: pass, perCh: perCh, lane: run.lane || "standard" };
+      const fe = S.finalExam || {};
+      const attempts = (fe.attempts || []).concat([att]);
+      const best = !fe.best || fe.best.pct < pct ? att : fe.best;
+      S.finalExam = { attempts: attempts, best: best };
+      const firstPass = pass && !(fe.best && fe.best.pass);
+      delete S.finalExamRun;
+      save();
+      if (firstPass) addXp(150, "Final Examination passed");
+      examResult(root, att, best, firstPass);
+    };
+    paint();
+    document.addEventListener("visibilitychange", function h() {
+      if (document.hidden && root.__examIv) toast("The exam clock never pauses — come straight back", "");
+    });
+  }
+  function examResult(root, att, best, firstPass) {
+    root.innerHTML = `
+      <div class="page-head"><p class="eyebrow">Reality FX OS · the capstone</p><h1 class="page-title">The Final Examination — result</h1></div>
+      <div class="exam-result ${att.pass ? "pass" : "fail"}">
+        <div class="exam-result-ic">${att.pass ? ICONS.trophy : ICONS.alert}</div>
+        <h2 class="gold-serif">${att.pass ? "You passed the Final Examination" : "Not this sitting"}</h2>
+        <div class="exam-result-score"><b>${att.pct}%</b><span>${att.correct} of ${att.total} correct · pass mark ${EXAM_PASS}%</span></div>
+        <p>${att.pass
+          ? (firstPass ? "The certificate door is open — +150 XP. Collect your certificate in the Certificate room." : "The certificate door is open — collect it in the Certificate room.")
+          : "Keep the honest review: read the explanations below, go back to the chapters you lost, then sit it again — the best result stands."}</p>
+      </div>
+      <div class="panel exam-per-ch">
+        <h3 class="panel-title gold-serif">Where you stood, chapter by chapter</h3>
+        <div class="exam-per-grid">${Object.keys(att.perCh).sort((a, b) => a - b).map(id => {
+          const r = att.perCh[id];
+          const p = Math.round(100 * r.c / r.t);
+          return `<div class="exam-per"><div class="exam-per-txt"><b>Ch ${id} · ${esc((CHAPTERS.find(c => c.id === +id) || {}).title || "")}</b><span>${r.c}/${r.t} correct</span></div><div class="exam-per-bar"><span style="width:${p}%"></span></div><em>${p}%</em></div>`;
+        }).join("")}</div>
+        <div class="exam-retake">
+          <button class="btn-gold" id="examRetake">${ICONS.note} Sit it again</button>
+          <button class="btn-ghost" id="examCert">${ICONS.grad} ${att.pass ? "Collect your certificate" : "See the certificate"}</button>
+        </div>
+      </div>`;
+    root.querySelector("#examRetake").addEventListener("click", () => { delete S.finalExamRun; save(); renderExam(root); });
+    root.querySelector("#examCert").addEventListener("click", () => location.hash = "#/certificate");
+  }
+
+  /* ============================================================
+     WORKSHOPS — the hands-on wing. Each workshop is a practical
+     session: the principle, a real task to do, and a short quiz that
+     checks the skill actually landed. Machine-graded, completed in
+     the OS, +25 XP each. Same spirit as the Laboratory — but built
+     around doing, not watching.
+     ============================================================ */
+  const WORKSHOPS = [
+    { id: "risk", icon: ICONS.shield, title: "The Risk Workshop", tag: "Position sizing · the 1% rule · lot math", dur: "40 min",
+      desc: "Every losing trader is a risk-manager who skipped class. This workshop makes the 1% rule a reflex: decide your stop before your entry, size the position so a loss costs no more than 1% of your account, and let the arithmetic — not the feeling — set the lot.",
+      task: "On paper or in the Trading Challenge: take your account balance, choose a stop distance in pips, and compute the lot size that risks exactly 1%. Do it three times with three different stops before you take the quiz.",
+      quiz: [
+        { q: "Your account is R50,000. One percent of it is:", options: ["R500", "R5,000", "R50", "R1,000"], answer: 0, explain: "1% of R50,000 is R500. That is the most this single trade is allowed to lose." },
+        { q: "The 1% rule is about limiting:", options: ["Your profits", "Your potential loss per trade", "Your number of trades", "Your screen time"], answer: 1, explain: "It caps the loss any single trade can inflict on the account — the one number that keeps you in the game." },
+        { q: "A 20-pip stop with a R500 risk budget means each pip of that position is worth:", options: ["R10", "R25", "R100", "R20"], answer: 1, explain: "R500 ÷ 20 pips = R25 per pip. That is your position sizing arithmetic in one line." },
+        { q: "Your stop hits. The correct response is:", options: ["Double the next position to win it back", "Take the small loss and move on", "Re-enter the same trade immediately", "Blame the market"], answer: 1, explain: "A planned small loss is the cost of doing business. Revenge-sizing after it is how accounts die." },
+        { q: "Risking 3% per trade on a streak of four losses costs your account:", options: ["12% — roughly a third of your 1% discipline budget", "3% total", "Nothing — losses don't stack", "30%"], answer: 0, explain: "Four losses at 3% each compound to about 11.5% of the account. Four at 1% costs about 4%. Small edges compound too — in the opposite direction." }
+      ] },
+    { id: "psychology", icon: ICONS.brain, title: "The Psychology Workshop", tag: "Revenge trading · discipline · the pause", dur: "35 min",
+      desc: "The market is a mirror: it shows you exactly how you handle loss. This workshop names the four ways traders self-destruct — revenge trading, overtrading, hesitation, and moving the stop — and gives you the one tool that beats all four: the pause.",
+      task: "Next time a trade closes against you, before opening anything: close the chart, walk away for ten minutes, and write one honest line about what you actually felt. That sentence is the workshop's assignment.",
+      quiz: [
+        { q: "Revenge trading is:", options: ["Trading again immediately to win back a loss", "Trading with a plan", "Trading the daily chart", "Taking a break"], answer: 0, explain: "It is the urge to make the market pay you back — and the fastest way to turn one loss into four." },
+        { q: "The pause works because it:", options: ["Breaks the emotional loop before the next decision", "Guarantees the next trade wins", "Hides your losses", "Stops the market"], answer: 0, explain: "Between the loss and the next entry is the only moment discipline can actually speak." },
+        { q: "Overtrading usually follows:", options: ["A plan followed perfectly", "Boredom or a need to 'do something'", "A full night's sleep", "A well-kept journal"], answer: 1, explain: "Most overtrading is not greed — it is the itch to feel active. The journal is the cure: if there is no setup, there is no trade." },
+        { q: "Moving a stop further from price after entry is:", options: ["Smart management", "Giving a losing idea more room than you planned — a discipline leak", "Always profitable", "Required by brokers"], answer: 1, explain: "Your stop was decided before the trade. Moving it after entry is hope negotiating with your plan — and hope loses." },
+        { q: "The most honest definition of discipline in trading is:", options: ["Following your plan even when it feels wrong", "Never losing money", "Trading every day", "Making big profits quickly"], answer: 0, explain: "Discipline is doing the thing you planned when your feelings argue against it. Everything else is talent or luck." }
+      ] },
+    { id: "structure", icon: ICONS.chart, title: "The Market Structure Workshop", tag: "Trends · support & resistance · the pullback", dur: "45 min",
+      desc: "Price does not move randomly — it moves in structure: higher highs and higher lows, support that holds, resistance that breaks. This workshop teaches you to read the map before you place the trade, so entries sit on pullbacks toward structure, not in the middle of nowhere.",
+      task: "Open the Trading Challenge chart. Mark the most recent swing high, swing low, and the nearest level of support and resistance — by hand, on paper, before the quiz. A trader who cannot draw the map has no business trading it.",
+      quiz: [
+        { q: "An uptrend is defined by:", options: ["Higher highs and higher lows", "Lower highs and lower lows", "Flat price", "High volume alone"], answer: 0, explain: "Structure is the skeleton of price: rising swing points = buyers in control." },
+        { q: "Support is:", options: ["A price level where buying has repeatedly stepped in", "A level where price always bounces", "The highest price ever traded", "A moving average"], answer: 0, explain: "Support is where demand has shown up before — a reference, not a promise." },
+        { q: "A breakout of resistance is most believable when:", options: ["Price closes through it with conviction", "Price touches it once and fades", "You are already in a losing trade", "Someone on social media says so"], answer: 0, explain: "A close beyond the level — not a spike through it — is what the structure actually confirms." },
+        { q: "The safest place to enter a trend is:", options: [["On the pullback toward support/resistance"], "At the extreme top of the move", "After price has already doubled", "At market open on Monday"], answer: 0, explain: "The pullback offers a stop that makes sense: below the level, with the trend behind you." },
+        { q: "A key level is stronger when:", options: ["It has been tested multiple times", "It has never been touched", "It is a round number", "It was drawn yesterday"], answer: 0, explain: "Repeated tests mean real buyers and sellers camped there — the level has history." }
+      ] },
+    { id: "journal", icon: ICONS.pen, title: "The Journal Workshop", tag: "Logging the trade · reviewing the habit", dur: "30 min",
+      desc: "A trade you don't write down never happened. The journal is where your pattern becomes visible: which setup you win on, which hour you trade badly in, what you felt while holding. This workshop wires the habit of logging every trade — the win AND the loss.",
+      task: "Open the Trade Journal and log your last three trades — or, if you haven't traded yet, the last three decisions you made in the Trading Challenge. Entry, exit, stop, the setup, and one honest line about how you felt.",
+      quiz: [
+        { q: "The main purpose of a trade journal is to:", options: ["Show you patterns your memory edits", "Prove you were right", "Impress other traders", "Fill time"], answer: 0, explain: "Memory keeps the wins and buries the losses. The journal is the unedited record." },
+        { q: "Which belongs in a journal entry?", options: ["The setup, entry, stop, exit, and how you felt", "Only winning trades", "Your broker's logo", "Predictions about the news"], answer: 0, explain: "The trade's anatomy — and the emotion behind it — is what makes the record useful." },
+        { q: "A losing trade logged honestly is:", options: ["A lesson you own", "A failure to hide", "A reason to stop trading", "Proof the market is rigged"], answer: 0, explain: "The loss is paid for either way; the journal makes it tuition instead of damage." },
+        { q: "You notice your journal shows losses cluster on Fridays. This is:", options: ["A pattern worth acting on", "Coincidence you should ignore", "The market's fault", "A journal bug"], answer: 0, explain: "That is exactly the kind of signal the journal exists to surface — act on it." },
+        { q: "The journal's deepest value is:", options: ["It turns experience into a measurable record", "It looks professional", "It fills your screen", "It impresses mentors"], answer: 0, explain: "Unwritten experience evaporates; a record compounds — the trader's version of interest." }
+      ] },
+    { id: "prop", icon: ICONS.trophy, title: "The Prop Challenge Workshop", tag: "Drawdown rules · targets · the prop mindset", dur: "50 min",
+      desc: "Prop-style challenges are won before a single trade: the drawdown limit is your boss, the target is your contract, and consistency is the whole game. This workshop runs you through the rules a funded account lives by — the same rules the Trading Challenge enforces.",
+      task: "Open the Trading Challenge and read its rules like a contract. Write down: the maximum drawdown allowed, the target you'd need to pass, and the maximum risk per trade the rules permit. Then play one session with those three numbers taped to your screen.",
+      quiz: [
+        { q: "In a prop-style challenge, the drawdown limit is:", options: ["A hard line the account must never cross", "A suggestion", "Only checked on Fridays", "The same as your profit target"], answer: 0, explain: "Cross it and the challenge ends. It is the first rule because it is the rule that protects the capital." },
+        { q: "A 5% max drawdown on a R100,000 challenge means:", options: ["The account can lose no more than R5,000 before failing", "You can lose R5,000 per trade", "The account starts at R5,000", "Profits above 5% are removed"], answer: 0, explain: "The drawdown is measured on the equity — R5,000 of room, used by losses, not by size." },
+        { q: "The fastest way to fail a prop challenge is:", options: ["Oversizing to rush the target", "Trading small and steady", "Following your plan", "Keeping a journal"], answer: 0, explain: "Challenges are lost on risk first and won on consistency second. One oversized trade ends the run." },
+        { q: "Consistency in a challenge means:", options: ["Similar risk and behaviour across trades", "The same trade repeated forever", "Never losing", "Trading the same pair always"], answer: 0, explain: "The machine is judging a repeatable process, not a lucky week." },
+        { q: "The prop mindset is best summarised as:", options: ["Trade like the money is not yours to lose", "Trade like every trade must win", "Trade as often as possible", "Trade only news events"], answer: 0, explain: "The account is a trust: your job is to protect it and grow it slowly — that is what gets you funded." }
+      ] },
+    { id: "examprep", icon: ICONS.note, title: "The Exam-Prep Workshop", tag: "How to sit the Final Examination", dur: "25 min",
+      desc: "The Final Examination is a different beast from chapter quizzes: hours long, one-way, no going back. This workshop rehearses the technique — pace yourself, bank the questions you know, never leave an answer blank, and let the clock be your referee.",
+      task: "Before you sit the real thing: do a timed 20-question warm-up from any three chapters with a 30-minute timer and no going back. If you finish early, spend the remaining time re-reading the questions — the first answer is usually the honest one.",
+      quiz: [
+        { q: "In a one-way exam, the best strategy is:", options: ["Answer each question as you go and move on", "Skip every question and come back", "Guess as fast as possible", "Spend all time on question one"], answer: 0, explain: "There is no going back — so the discipline is one careful pass, not perfection hunting." },
+        { q: "You don't know an answer. The right move is:", options: ["Eliminate what you can and make your best choice", "Leave it blank", "Panic", "Close the exam"], answer: 0, explain: "A reasoned guess has a chance; a blank answer has none." },
+        { q: "With 150 minutes and 78 questions, your pace is roughly:", options: ["Under 2 minutes per question", "30 seconds per question", "10 minutes per question", "Whatever feels right"], answer: 0, explain: "78 questions in 150 minutes is just under two minutes each — the clock is the referee, pace to it." },
+        { q: "The exam's real purpose is:", options: ["To prove you can hold the whole course in one sitting", "To test how fast you can read", "To make you fail", "To fill your afternoon"], answer: 0, explain: "Thirteen chapters, one paper, hours long — stamina and coverage are part of what is being measured." },
+        { q: "After a failed sitting, the honest path is:", options: ["Review the chapter breakdown and study the weak chapters", "Sit it again immediately and hope", "Give up", "Blame the questions"], answer: 0, explain: "The result screen shows exactly where you lost the paper — that map is the study plan." }
+      ] }
+  ];
+  function renderWorkshops(root) {
+    const done = S.workshops || {};
+    root.appendChild(el("div", "page-head", `
+      <p class="eyebrow">Reality FX OS · the hands-on wing</p>
+      <h1 class="page-title">Workshops</h1>
+      <p class="page-sub">Theory you watch fades; skills you do stay. Each workshop is a practical session — the principle, a real task, and a short quiz that checks the skill actually landed. ${Object.keys(done).length} of ${WORKSHOPS.length} completed.</p>`));
+    const grid = el("div", "ws-grid");
+    WORKSHOPS.forEach(w => {
+      const d = done[w.id];
+      grid.appendChild(el("div", "ws-card" + (d && d.done ? " done" : ""), `
+        <div class="ws-card-head">
+          <span class="ws-ic">${w.icon}</span>
+          <span class="ws-status ${d && d.done ? "up" : ""}">${d && d.done ? "Completed · " + d.score + "%" : "Open"}</span>
+        </div>
+        <h3 class="gold-serif">${esc(w.title)}</h3>
+        <p class="ws-tag">${esc(w.tag)}</p>
+        <p class="ws-desc">${esc(w.desc)}</p>
+        <div class="ws-card-foot"><span>${esc(w.dur)}</span><button class="btn-gold" data-ws="${w.id}">${d && d.done ? "Review" : "Start workshop"}</button></div>`));
+    });
+    root.appendChild(grid);
+    grid.querySelectorAll("[data-ws]").forEach(b => b.addEventListener("click", function () {
+      const w = WORKSHOPS.find(x => x.id === this.getAttribute("data-ws"));
+      if (w) renderWorkshopDetail(root, w);
+    }));
+  }
+  function renderWorkshopDetail(root, w) {
+    const done = S.workshops || {};
+    const d = done[w.id];
+    const drill = w.id === "risk"
+      ? `<div class="panel ws-drill" id="wsDrill">
+          <h3 class="panel-title gold-serif">The 1% drill — hands on the rule</h3>
+          <p class="ws-quiz-sub">This is the question every student asks: <i>how do I know this trade is 1%?</i> Build a trade below — account, entry, stop, target, size — and the machine answers instantly: the money at risk, the percentage of your account, and whether you're inside the rule. Then prove your own arithmetic: type what <b>you</b> think the risk is and check it.</p>
+          <div class="drill-grid">
+            <label>Account size ($)<input type="number" id="dr-bal" value="10000" min="0" step="100"></label>
+            <label>Position size (units)<input type="number" id="dr-units" value="10000" min="0" step="100"><span class="tool-hint">1 standard lot = 100,000 units</span></label>
+            <label>Entry price<input type="number" id="dr-entry" value="1.1000" step="0.0001"></label>
+            <label>Stop loss<input type="number" id="dr-stop" value="1.0950" step="0.0001"></label>
+            <label>Take profit<input type="number" id="dr-target" value="1.1200" step="0.0001"></label>
+            <label>Direction<select id="dr-side"><option value="long">Long (buy)</option><option value="short">Short (sell)</option></select></label>
+          </div>
+          <div class="tool-result" id="dr-result"><span class="dim">Build the trade — the verdict updates live</span></div>
+          <div class="drill-check">
+            <h4>Now prove the arithmetic</h4>
+            <p class="drill-check-sub">Without looking at the verdict above: how much money is at risk in this trade?</p>
+            <div class="drill-check-row">
+              <input type="number" id="dr-guess" placeholder="Your answer in $" min="0" step="1">
+              <button class="btn-gold" id="drVerify">${ICONS.check} Check my answer</button>
+            </div>
+            <div id="dr-verify-result"></div>
+          </div>
+        </div>`
+      : "";
+    root.innerHTML = `
+      <button class="btn-ghost ws-back">${ICONS.map} ← All workshops</button>
+      <div class="page-head"><p class="eyebrow">Reality FX OS · workshop</p><h1 class="page-title">${esc(w.title)}</h1>
+      <p class="page-sub">${esc(w.tag)} · ${esc(w.dur)}${d && d.done ? " · Completed at " + d.score + "%" : ""}</p></div>
+      <div class="ws-layout">
+        <div class="panel ws-principle">
+          <h3 class="panel-title gold-serif">The principle</h3>
+          <p>${esc(w.desc)}</p>
+        </div>
+        <div class="panel ws-task">
+          <h3 class="panel-title gold-serif">The task</h3>
+          <p>${esc(w.task)}</p>
+        </div>
+      </div>
+      ${drill}
+      <div class="panel ws-quiz-panel">
+        <h3 class="panel-title gold-serif">The check</h3>
+        <p class="ws-quiz-sub">Five questions on the skill. Answer them all, then submit — 70% or better completes the workshop (+25 XP).</p>
+        <div class="ws-questions">${w.quiz.map((q, qi) => `
+          <div class="ws-q" data-q="${qi}">
+            <p class="ws-q-t"><b>${qi + 1}.</b> ${esc(q.q)}</p>
+            <div class="ws-options">${q.options.map((o, oi) => `<button class="ws-opt" data-oi="${oi}">${esc(o)}</button>`).join("")}</div>
+          </div>`).join("")}</div>
+        <div class="ws-actions"><button class="btn-gold" id="wsSubmit">${ICONS.check} Submit workshop</button></div>
+        <div class="ws-feedback" id="wsFeedback"></div>
+      </div>`;
+    root.querySelector(".ws-back").addEventListener("click", () => renderWorkshops(root));
+    // The 1% drill (Risk workshop only): live risk maths + a verify-the-
+    // arithmetic check. The machine shows the money at risk and the verdict
+    // on the 1% rule the moment the numbers are set — then the student has
+    // to compute the same number themselves before the machine confirms it.
+    if (w.id === "risk") {
+      const g = sel => root.querySelector(sel);
+      const drRead = () => ({
+        bal: Math.max(0, +(g("#dr-bal") || {}).value || 0),
+        units: Math.max(0, +(g("#dr-units") || {}).value || 0),
+        e: Math.max(0, +(g("#dr-entry") || {}).value || 0),
+        s: Math.max(0, +(g("#dr-stop") || {}).value || 0),
+        t: Math.max(0, +(g("#dr-target") || {}).value || 0),
+        side: (g("#dr-side") || {}).value || "long"
+      });
+      const drLive = () => {
+        const d = drRead();
+        const riskPer = d.side === "long" ? d.e - d.s : d.s - d.e;
+        const rewPer = d.side === "long" ? d.t - d.e : d.e - d.t;
+        const res = g("#dr-result");
+        if (!d.bal || !d.units || !d.e || riskPer <= 0) {
+          res.innerHTML = `<span class="dim">${riskPer <= 0 && d.e ? "Stop sits on the wrong side of entry for a " + d.side + " — flip the stop or the direction." : "Build the trade — the verdict updates live"}</span>`;
+          return;
+        }
+        const risk$ = riskPer * d.units;
+        const riskPct = risk$ / d.bal * 100;
+        const within = riskPct <= 1;
+        const rr = rewPer > 0 ? Math.abs(rewPer) / Math.abs(riskPer) : 0;
+        const maxUnits = riskPer > 0 ? Math.floor(d.bal * 0.01 / riskPer) : 0;
+        res.innerHTML = `
+          <div class="out-big ${within ? "good" : "warn"}">${riskPct.toFixed(2)}% <small>of your account at risk</small></div>
+          <div class="out-row"><span>Money at risk</span><b>$${risk$.toFixed(2)}</b></div>
+          <div class="out-row"><span>Reward : risk</span><b>${rr > 0 ? "1 : " + rr.toFixed(2) : "—"}</b></div>
+          <div class="out-row"><span>Max size within 1%</span><b>${maxUnits.toLocaleString()} units</b></div>
+          ${within ? "<div class='warn-note' style='border-color:rgba(80,180,110,.35);background:rgba(80,180,110,.08);color:#9fe3bd'>✓ Within the 1% rule.</div>" : `<div class="warn-note">Over the 1% rule — size down to ${maxUnits.toLocaleString()} units (or cut the stop distance).</div>`}`;
+      };
+      const drVfy = () => {
+        const d = drRead();
+        const riskPer = d.side === "long" ? d.e - d.s : d.s - d.e;
+        const risk$ = riskPer > 0 ? riskPer * d.units : 0;
+        const guess = Math.max(0, +(g("#dr-guess") || {}).value || 0);
+        const box = g("#dr-verify-result");
+        if (!risk$ || !guess) { box.innerHTML = "<span class='warn-note'>Set the trade and type your answer first.</span>"; return; }
+        const diff = Math.abs(guess - risk$) / risk$;
+        const close = diff <= 0.02;
+        box.innerHTML = close
+          ? `<div class="warn-note" style="border-color:rgba(80,180,110,.35);background:rgba(80,180,110,.08);color:#9fe3bd">✓ Correct — $${risk$.toFixed(2)} at risk. The formula: (entry − stop) × size = ${(d.side === "long" ? d.e - d.s : d.s - d.e).toFixed(4)} × ${d.units.toLocaleString()}. You can do this before every trade.</div>`
+          : `<div class="warn-note">Not quite — $${risk$.toFixed(2)} is the real number. (Entry − stop) × size = ${(d.side === "long" ? d.e - d.s : d.s - d.e).toFixed(4)} × ${d.units.toLocaleString()}. Try once more, then check.</div>`;
+      };
+      ["#dr-bal", "#dr-units", "#dr-entry", "#dr-stop", "#dr-target"].forEach(id => {
+        const i = g(id); if (i) i.addEventListener("input", drLive);
+      });
+      const sideEl = g("#dr-side"); if (sideEl) sideEl.addEventListener("change", drLive);
+      const v = g("#drVerify"); if (v) v.addEventListener("click", drVfy);
+      drLive();
+    }
+    const picks = {};
+    root.querySelectorAll(".ws-opt").forEach(b => b.addEventListener("click", function () {
+      const qEl = this.closest(".ws-q");
+      const qi = parseInt(qEl.getAttribute("data-q"), 10);
+      const oi = parseInt(this.getAttribute("data-oi"), 10);
+      picks[qi] = oi;
+      qEl.querySelectorAll(".ws-opt").forEach(x => x.classList.remove("on"));
+      this.classList.add("on");
+    }));
+    root.querySelector("#wsSubmit").addEventListener("click", function () {
+      const missing = w.quiz.some((_, i) => picks[i] === undefined);
+      if (missing) { toast("Answer every question before submitting", ""); return; }
+      let correct = 0;
+      w.quiz.forEach((q, i) => { if (picks[i] === q.answer) correct++; });
+      const pct = Math.round(100 * correct / w.quiz.length);
+      const pass = pct >= 70;
+      const wasDone = !!(S.workshops && S.workshops[w.id] && S.workshops[w.id].done);
+      S.workshops = S.workshops || {};
+      S.workshops[w.id] = { done: pass || wasDone, score: Math.max((S.workshops[w.id] && S.workshops[w.id].score) || 0, pct), at: new Date().toISOString() };
+      if (pass && !wasDone) addXp(25, "Workshop completed: " + w.title);
+      save();
+      const fb = root.querySelector("#wsFeedback");
+      fb.innerHTML = `<div class="ws-fb-in ${pass ? "pass" : "fail"}"><b>${pct}% — ${pass ? "Workshop complete · +25 XP" : "Not yet — read the explanations and try again"}</b></div>` +
+        w.quiz.map((q, i) => {
+          const ok = picks[i] === q.answer;
+          return `<div class="ws-explain ${ok ? "ok" : "no"}"><b>${i + 1}. ${ok ? "Correct" : "Wrong — the answer: " + esc(q.options[q.answer])}</b><p>${esc(q.explain)}</p></div>`;
+        }).join("");
+      root.querySelector("#wsSubmit").textContent = "Submit again";
+      fb.scrollIntoView({ behavior: "smooth" });
+    });
   }
 
   /* ---------- Yellow light mode ----------
