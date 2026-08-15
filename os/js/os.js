@@ -301,7 +301,18 @@
                 try { window.dispatchEvent(new CustomEvent("rfx:power-on")); } catch (e) {}
               }
             } else {
-              setAcademyHealth("stale", "Older academy copy — your record isn't here; re-enter from your member panel");
+              // The linked server holds an OLDER copy — the link must not
+              // stay pointing at it. Discover the freshest academy server
+              // (the one holding THIS student's record) and re-point every
+              // return link there; only if none is found does the link stay
+              // put, marked stale so the student knows to re-enter.
+              discoverAcademy().then(function (origin) {
+                if (origin) {
+                  setAcademyHealth("live", "Academy link · live — your record is held");
+                } else {
+                  setAcademyHealth("stale", "Older academy copy — your record isn't here; re-enter from your member panel");
+                }
+              });
             }
           })
           .catch(function () {
@@ -1095,6 +1106,8 @@
     check:  ICON('<path d="M12 2l2.4 2.4 3.4-.5.5 3.4L20.7 9l-1.6 3 1.6 3-2.4 1.7-.5 3.4-3.4-.5L12 22l-2.4-2.4-3.4.5-.5-3.4L3.3 15l1.6-3-1.6-3 2.4-1.7.5-3.4 3.4.5L12 2z"/><path d="M9 12l2 2 4-4"/>'),
     flame:  ICON('<path d="M12 2s5 4.5 5 10a5 5 0 0 1-10 0c0-1.5.5-3 1.5-4.5C9 9 12 6 12 2z"/>'),
     brain:  ICON('<path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44A2.5 2.5 0 0 1 4 17.5v-3a2.5 2.5 0 0 1-1.5-4.64A2.5 2.5 0 0 1 4.5 7.5 2.5 2.5 0 0 1 9.5 2z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44A2.5 2.5 0 0 0 20 17.5v-3a2.5 2.5 0 0 0 1.5-4.64A2.5 2.5 0 0 0 19.5 7.5 2.5 2.5 0 0 0 14.5 2z"/>'),
+    download: ICON('<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>'),
+    scale:   ICON('<path d="M12 3v18M5 7h14M6 7l-3 6a3 3 0 0 0 6 0L6 7z"/><path d="M18 7l-3 6a3 3 0 0 0 6 0l-3-6z"/><line x1="12" y1="3" x2="12" y2="5"/>'),
     flask:  ICON('<path d="M9 3h6M10 3v5.5L4.5 18a2 2 0 0 0 1.8 3h11.4a2 2 0 0 0 1.8-3L14 8.5V3"/><path d="M7 15h10"/>'),
     robot:  ICON('<path d="M12 8V4M6 8h12a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1"/><circle cx="15" cy="13" r="1"/><path d="M9 18v2M15 18v2"/>'),
     pen:    ICON('<path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>'),
@@ -5367,10 +5380,12 @@
         fetch("api/handoffs", { cache: "no-store" }).then(function (r) { done(r.ok); }).catch(function () { done(false); });
       }, 1500);
     });
-    const itgRow = el("div", "dc-actions");
+    const itgRow = el("div", "itg-actions");
     itgRow.appendChild(runBtn);
-    itgRow.appendChild(itgStatus);
     root.appendChild(itgRow);
+    const itgStat = el("div", "itg-status");
+    itgStat.appendChild(itgStatus);
+    root.appendChild(itgStat);
 
     // Export for the moderator
     const exportBtn = el("button", "btn-gold", "Export full report (JSON)");
@@ -5398,6 +5413,7 @@
       <p class="page-sub">Practise the exact formulas from Chapter 7 — position sizing, the 1% rule, R-multiples, and drawdown recovery. No real money required. This is where theory becomes instinct.</p>`));
     const grid = el("div", "lab-grid");
     grid.appendChild(labRiskChecker());   // the 1% rule, made concrete — the question students ask most
+    grid.appendChild(labMaSandbox());     // the MA workbench — build it, tune it, break it (live from the Lab)
     grid.appendChild(labPositionSizer());
     grid.appendChild(labRRPlanner());
     grid.appendChild(labOutcomeR());
@@ -5455,6 +5471,18 @@
     c.querySelectorAll("input").forEach(i => i.addEventListener("input", upd));
     c.querySelector("#rc-side").addEventListener("change", upd);
     upd();
+    return c;
+  }
+
+  /* The MA Sandbox — the build-it-tune-it-break-it workbench, living
+     permanently in the Laboratory. Same seeded market, same sliders, same
+     presets and breakout drill as the workshop — so the Lab is not just
+     arithmetic: it is a whole strategy workbench at the student's fingertips. */
+  function labMaSandbox() {
+    const c = el("div", "tool-card ma-compact");
+    c.innerHTML = `<div class="tool-head"><span class="tool-ic">${ICONS.chart}</span><div><h3>MA Strategy Workbench</h3><p class="tool-sub">Build a crossover, tune the periods, break it on purpose — a synthetic market that answers to your hand.</p></div></div>
+      <div class="tool-body">${maDrillHTML("-lab")}</div>`;
+    wireMaDrill(c, "-lab");
     return c;
   }
 
@@ -6075,6 +6103,10 @@
       ? `<div class="cert-badge-row"><p class="cert-label">Earned badges</p><div>${certKeys.map(k => `<span class="cert-badge" title="${esc(BADGES[k].name)}">${badgeIc(k)}</span>`).join("")}</div></div>`
       : "";
     root.appendChild(el("div", "cert-wrap", `
+      <div class="cert-stage">
+        <span class="cert-travel"></span>
+        <span class="cert-travel cert-travel-2"></span>
+        <span class="cert-glass-halo"></span>
       <div class="cert">
         <div class="cert-border"></div>
         <span class="cert-corner tl">◆</span><span class="cert-corner tr">◆</span><span class="cert-corner bl">◆</span><span class="cert-corner br">◆</span>
@@ -6107,6 +6139,7 @@
           <div class="cert-sig-line"></div>
           <p class="cert-label">Founder · Reality FX</p>
         </div>
+      </div>
       </div>
       <button class="btn-gold" onclick="window.print()">Print certificate</button>`));
   }
@@ -6398,14 +6431,19 @@
      strategy. The student tunes the periods with sliders, then deliberately
      breaks it with presets (whipsaw, lag, inverted) and watches the same
      market turn to noise under their own hand. */
-  function maDrillHTML() {
+  /* The workbench is shared: the workshop embeds it, and the Laboratory
+     keeps a persistent copy as the MA Sandbox tool card. The suffix keeps
+     element ids unique when both are ever mounted (they never are, but a
+     rerender mid-flight must never collide). */
+  function maDrillHTML(suf) {
+    suf = suf || "";
     return `<div class="panel ws-drill ma-drill">
         <h3 class="panel-title gold-serif">The workbench — build it, tune it, break it</h3>
         <p class="ws-quiz-sub">This is a synthetic market you can break. Price moves on its own; the gold line is your <b>fast</b> MA, the grey line your <b>slow</b> MA. Drag the sliders and watch the crosses fire — then hit a <b>break it</b> preset and watch the same market turn to noise under your own hand. The sim at the bottom scores the strategy on every change.</p>
-        <div class="ma-canvas"><svg id="maSvg" viewBox="0 0 760 300" preserveAspectRatio="none" aria-hidden="true"></svg><div class="ma-legend"><span class="ma-l"><i style="background:var(--accent-gold)"></i>Price</span><span class="ma-l"><i style="background:#ffd78c"></i>Fast MA</span><span class="ma-l"><i style="background:#8f8a7a"></i>Slow MA</span><span class="ma-l"><i class="ma-x" style="background:#7ee2a4"></i>Golden cross</span><span class="ma-l"><i class="ma-x" style="background:#f0a69e"></i>Death cross</span></div></div>
+        <div class="ma-canvas"><svg id="maSvg${suf}" viewBox="0 0 760 300" preserveAspectRatio="none" aria-hidden="true"></svg><div class="ma-legend"><span class="ma-l"><i style="background:var(--accent-gold)"></i>Price</span><span class="ma-l"><i style="background:#ffd78c"></i>Fast MA</span><span class="ma-l"><i style="background:#8f8a7a"></i>Slow MA</span><span class="ma-l"><i class="ma-x" style="background:#7ee2a4"></i>Golden cross</span><span class="ma-l"><i class="ma-x" style="background:#f0a69e"></i>Death cross</span></div></div>
         <div class="ma-controls">
-          <label>Fast MA <input type="range" id="maFast" min="2" max="60" value="10"><b id="maFastV">10</b></label>
-          <label>Slow MA <input type="range" id="maSlow" min="5" max="120" value="30"><b id="maSlowV">30</b></label>
+          <label>Fast MA <input type="range" id="maFast${suf}" min="2" max="60" value="10"><b id="maFastV${suf}">10</b></label>
+          <label>Slow MA <input type="range" id="maSlow${suf}" min="5" max="120" value="30"><b id="maSlowV${suf}">30</b></label>
         </div>
         <div class="ma-presets">
           <span class="ma-p-label">Build it / break it:</span>
@@ -6414,9 +6452,11 @@
           <button class="btn-ghost sm" data-ma="5,120">Lag 5/120</button>
           <button class="btn-ghost sm" data-ma="45,10">Inverted 45/10</button>
           <button class="btn-ghost sm" data-ma="20,50">Smooth 20/50</button>
+          <button class="btn-ghost sm" id="maBreak${suf}" data-ma-break="1">${ICONS.zap} Breakout drill — size it to 1%</button>
         </div>
-        <div class="ma-verdict" id="maVerdict"></div>
-        <div class="ma-stats" id="maStats"></div>
+        <div class="ma-verdict" id="maVerdict${suf}"></div>
+        <div class="ma-stats" id="maStats${suf}"></div>
+        <div class="ma-breakout" id="maBreakout${suf}"></div>
       </div>`;
   }
   function maSeries(seed) {
@@ -6444,15 +6484,17 @@
     }
     return out;
   }
-  function wireMaDrill(root) {
+  function wireMaDrill(root, suf) {
+    suf = suf || "";
+    const $ = id => root.querySelector("#" + id + suf);
     const px = maSeries(20260815);
-    const svg = root.querySelector("#maSvg");
+    const svg = $("maSvg");
     const W = 760, H = 300;
     const draw = () => {
-      const fast = Math.max(2, Math.min(60, parseInt(root.querySelector("#maFast").value, 10) || 10));
-      const slow = Math.max(5, Math.min(120, parseInt(root.querySelector("#maSlow").value, 10) || 30));
-      root.querySelector("#maFastV").textContent = fast;
-      root.querySelector("#maSlowV").textContent = slow;
+      const fast = Math.max(2, Math.min(60, parseInt($("maFast").value, 10) || 10));
+      const slow = Math.max(5, Math.min(120, parseInt($("maSlow").value, 10) || 30));
+      $("maFastV").textContent = fast;
+      $("maSlowV").textContent = slow;
       const f = maVals(px, fast), s = maVals(px, slow);
       const lo = Math.min.apply(null, px) * 0.985, hi = Math.max.apply(null, px) * 1.015;
       const X = i => (i / (px.length - 1)) * W, Y = v => H - ((v - lo) / (hi - lo)) * (H - 16) - 8;
@@ -6487,9 +6529,9 @@
       else if (slow >= 100 && fast <= 8) verdict = "Lag — the slow MA is so far behind price that crosses fire late, near the end of the move. Smoother, yes; slower, yes — and late signals are the price of smoothness.";
       else if (fast <= 4) verdict = "Nervous — a very fast line crosses constantly, so the strategy trades often and most of those trades are noise. A wider fast MA filters the wiggle.";
       else { verdict = "Healthy configuration — the fast line filters the noise, the slow line anchors the trend, and the crosses cluster around real turns. This is what a tuned lens looks like."; tone = "good"; }
-      root.querySelector("#maVerdict").innerHTML = `<div class="ma-verdict-in ${tone}">${verdict}</div>`;
+      $("maVerdict").innerHTML = `<div class="ma-verdict-in ${tone}">${verdict}</div>`;
       const golds = crosses.filter(c => c.golden).length, deaths = crosses.length - golds;
-      root.querySelector("#maStats").innerHTML = `
+      $("maStats").innerHTML = `
         <div class="ma-stat"><b>${crosses.length}</b><span>crosses</span></div>
         <div class="ma-stat"><b>${golds}</b><span>golden</span></div>
         <div class="ma-stat"><b>${deaths}</b><span>death</span></div>
@@ -6504,15 +6546,99 @@
         <polyline points="${line(s)}" fill="none" stroke="#8f8a7a" stroke-width="2"/>
         ${crosses.map(c => `<circle cx="${c.x}" cy="${c.y}" r="4" fill="${c.golden ? "#7ee2a4" : "#f0a69e"}" stroke="#0e0d0a" stroke-width="1.4"/>`).join("")}`;
     };
-    root.querySelector("#maFast").addEventListener("input", draw);
-    root.querySelector("#maSlow").addEventListener("input", draw);
+    $("maFast").addEventListener("input", draw);
+    $("maSlow").addEventListener("input", draw);
     root.querySelectorAll("[data-ma]").forEach(b => b.addEventListener("click", function () {
       const [f, s] = this.getAttribute("data-ma").split(",").map(Number);
-      root.querySelector("#maFast").value = f;
-      root.querySelector("#maSlow").value = s;
+      $("maFast").value = f;
+      $("maSlow").value = s;
       draw();
+      // a healthy config found from a preset counts as mastery of the drill
+      checkHealthy();
     }));
     draw();
+
+    /* The breakout drill — the 1% rule, made concrete on a live signal.
+       The workbench detects a cross, then hands the student a real
+       sizing problem: their account, the entry, the stop distance, and the
+       question every student asks — HOW MANY UNITS can I risk at exactly
+       1%? They type the size, the machine verifies their arithmetic, and
+       the first correct answer earns the drill XP. */
+    const box = $("maBreakout");
+    if (box) {
+      let active = false;
+      const start = () => {
+        if (active) return;
+        // a deterministic scenario from the seeded series — the first
+        // golden cross after bar 20 of the classic 10/30 setup
+        const f = maVals(px, 10), s = maVals(px, 30);
+        let ci = -1;
+        for (let i = 21; i < px.length; i++) {
+          if (f[i - 1] !== null && f[i] !== null && s[i - 1] !== null && s[i] !== null &&
+              (f[i - 1] <= s[i - 1]) !== (f[i] <= s[i]) && f[i] > s[i]) { ci = i; break; }
+        }
+        const entry = Math.round(px[Math.max(ci, 60)] * 1000) / 1000;
+        const bal = 10000;
+        const stopDist = 0.0050; // 50 pips on a 1.0000 base — a 1% risk needs units = bal*0.01/stopDist
+        const answer = Math.floor(bal * 0.01 / stopDist / 100) * 100; // whole lots of 100 units
+        active = true;
+        box.innerHTML = `
+          <div class="ma-bo-head">${ICONS.zap} Breakout drill — size this trade to the 1% rule</div>
+          <p class="ma-bo-sub">Your crossover fires a signal. Before you click buy, the rule needs an answer: <b>how many units can you risk?</b></p>
+          <div class="ma-bo-facts">
+            <span>Account: <b>$${bal.toLocaleString()}</b></span>
+            <span>Entry: <b>${entry.toFixed(4)}</b></span>
+            <span>Stop distance: <b>${stopDist.toFixed(4)}</b></span>
+            <span>Rule: <b>risk ≤ 1% of account</b></span>
+          </div>
+          <div class="ma-bo-row">
+            <input type="number" id="maBoGuess${suf}" placeholder="Your position size (units)" min="0" step="100">
+            <button class="btn-gold" id="maBoVerify${suf}">${ICONS.check} Verify my size</button>
+          </div>
+          <div id="maBoResult${suf}"></div>`;
+        const res = $("maBoResult");
+        const vBtn = $("maBoVerify");
+        const guessIn = $("maBoGuess");
+        vBtn.addEventListener("click", () => {
+          const guess = Math.max(0, +(guessIn.value || 0));
+          if (!guess) { res.innerHTML = "<span class='warn-note'>Type your position size first — then the machine checks your arithmetic.</span>"; return; }
+          const diff = Math.abs(guess - answer) / answer;
+          if (diff <= 0.02) {
+            const risk$ = stopDist * answer;
+            res.innerHTML = `<div class="warn-note" style="border-color:rgba(80,180,110,.35);background:rgba(80,180,110,.08);color:#9fe3bd">✓ Correct — ${answer.toLocaleString()} units puts exactly $${risk$.toFixed(0)} (1.00%) at risk. The formula: (balance × 1%) ÷ stop distance = ($${bal.toLocaleString()} × 0.01) ÷ ${stopDist.toFixed(4)} = ${answer.toLocaleString()}. You can do this before every trade.</div>`;
+            S.workshops = S.workshops || {};
+            S.workshops.movingavg = S.workshops.movingavg || {};
+            if (!S.workshops.movingavg.drill) {
+              S.workshops.movingavg.drill = true;
+              addXp(5, "Breakout drill: sized the 1% position correctly");
+              toast("Breakout drill mastered — size before you click. +5 XP", "");
+            }
+            save();
+            vBtn.disabled = true;
+          } else {
+            res.innerHTML = `<div class="warn-note">Not quite — the 1% formula is (balance × 0.01) ÷ stop distance = ($${bal.toLocaleString()} × 0.01) ÷ ${stopDist.toFixed(4)} = <b>${answer.toLocaleString()} units</b>. Round to a clean lot size and try once more.</div>`;
+          }
+        });
+      };
+      root.querySelector("#maBreak" + suf).addEventListener("click", start);
+    }
+    // the healthy-config reward (shared with the workshop wiring)
+    const checkHealthy = () => {
+      const fast = parseInt($("maFast").value, 10);
+      const slow = parseInt($("maSlow").value, 10);
+      if (fast >= 5 && fast < slow && slow <= 60) {
+        S.workshops = S.workshops || {};
+        S.workshops.movingavg = S.workshops.movingavg || {};
+        if (!S.workshops.movingavg.drill) {
+          S.workshops.movingavg.drill = true;
+          addXp(5, "Moving Averages drill: found a healthy configuration");
+          toast("Workbench mastered — a tuned lens. +5 XP", "");
+        }
+        save();
+      }
+    };
+    $("maFast").addEventListener("input", checkHealthy);
+    $("maSlow").addEventListener("input", checkHealthy);
   }
 
   function renderWorkshops(root) {
@@ -6665,32 +6791,6 @@
     }
     if (w.id === "movingavg") {
       wireMaDrill(root);
-      // The break-it moment: the first time the student presses a preset that
-      // degrades the strategy, the machine names what happened — and the first
-      // time they find a healthy configuration, they get the drill's XP.
-      if (!(S.workshops && S.workshops.movingavg && S.workshops.movingavg.drill)) {
-        const presets = root.querySelectorAll("[data-ma]");
-        let healthySeen = false;
-        const check = () => {
-          if (healthySeen) return;
-          const fast = parseInt(root.querySelector("#maFast").value, 10);
-          const slow = parseInt(root.querySelector("#maSlow").value, 10);
-          if (fast >= 5 && fast < slow && slow <= 60) {
-            healthySeen = true;
-            S.workshops = S.workshops || {};
-            S.workshops.movingavg = S.workshops.movingavg || {};
-            if (!S.workshops.movingavg.drill) {
-              S.workshops.movingavg.drill = true;
-              addXp(5, "Moving Averages drill: found a healthy configuration");
-              toast("Workbench mastered — a tuned lens. +5 XP", "");
-            }
-            save();
-          }
-        };
-        root.querySelector("#maFast").addEventListener("input", check);
-        root.querySelector("#maSlow").addEventListener("input", check);
-        presets.forEach(b => b.addEventListener("click", check));
-      }
     }
     const picks = {};
     root.querySelectorAll(".ws-opt").forEach(b => b.addEventListener("click", function () {
