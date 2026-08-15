@@ -1628,13 +1628,24 @@
     if (!window.RFXInstallApp) return;                          // no PWA layer — nothing to offer
     if (window.RFXIsPwaInstalled && RFXIsPwaInstalled()) return; // already installed (or standalone)
     if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") return;
-    const show = () => { btn.hidden = false; };
+    const show = () => {
+      btn.hidden = false;
+      // one-time, subtle nudge — a soft gold pulse, never more than once per
+      // device, gone the moment they click. No banner, no popup.
+      let hinted = false;
+      try { hinted = !!(S && S.pwaHintShown); } catch (e) {}
+      if (!hinted) {
+        try { S.pwaHintShown = true; save(); } catch (e) {}
+        btn.classList.add("hinting");
+        setTimeout(() => btn.classList.remove("hinting"), 7000);
+      }
+    };
     window.addEventListener("rfx:pwa-installable", show);
     window.addEventListener("rfx:pwa-installed", () => { btn.hidden = true; });
     // iOS can't fire beforeinstallprompt — the button opens the Share → Add
     // to Home Screen hint (dispatched by RFXInstallApp on iOS).
     if (/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) show();
-    btn.addEventListener("click", () => { try { window.RFXInstallApp(); } catch (e) {} });
+    btn.addEventListener("click", () => { btn.classList.remove("hinting"); try { window.RFXInstallApp(); } catch (e) {} });
   }
 
   /* ---------- Router ---------- */

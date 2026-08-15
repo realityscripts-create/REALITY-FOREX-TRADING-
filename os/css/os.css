@@ -342,6 +342,14 @@ body.nav-open { overflow: hidden; }
 }
 .app-install-btn:hover { border-color: rgba(212,175,55,.7); background: rgba(212,175,55,.12); transform: translateY(-1px); }
 .app-install-btn .ni-ic { display: inline-flex; }
+/* one-time first-visit nudge: a soft, fading gold pulse — the same
+   restrained "subtly alive" language as the brand border, never a flashy
+   popup. Fires at most once per device, for ~3.2s, then rests. */
+.app-install-btn.hinting { animation: appHintPulse 1.6s ease-in-out 2; border-color: rgba(212,175,55,.85); }
+@keyframes appHintPulse {
+  0%, 100% { box-shadow: 0 0 3px rgba(212,175,55,.15); }
+  50% { box-shadow: 0 0 16px rgba(212,175,55,.45); }
+}
 .side-rank { display: flex; align-items: center; gap: 12px; }
 .side-rank .rank-ic { font-size: 26px; }
 .side-rank .rank-name { font-family: var(--font-heading); font-size: 15px; color: var(--accent-gold-light); }
