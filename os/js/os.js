@@ -1501,8 +1501,14 @@
     hour100:    { name: "Century of Study",   ic: "galaxy", desc: "100 hours of study. The market can't give this back — only you could." },
     study3:     { name: "The Unseen Grind",   ic: "moon", desc: "3 consecutive days of study — the habit that quietly makes professionals." }
   };
+  // The icon safety net: an unknown key can never render the literal string
+  // "undefined" on a student's screen — it falls back to a neutral mark. This
+  // is the root-fix for the brain/download/scale family of bugs: the static
+  // ICONS table is guarded by the audit, and every DYNAMIC lookup goes
+  // through here so a data-driven key can't leak either.
+  const ic = key => ICONS[key] || ICONS.sparkle || "";
   // Stroke icon for a badge key (SVG from the ICONS set; safe fallback "").
-  const badgeIc = key => { const b = BADGES[key]; return b ? (ICONS[b.ic] || b.icon || "") : ""; };
+  const badgeIc = key => { const b = BADGES[key]; return b ? (ICONS[b.ic] || b.icon || ic(b.ic)) : ""; };
   // Milestones (in seconds) for the time-in-the-game badges
   const TIME_BADGES = [
     { key: "hour1",   secs: 3600 },
@@ -3524,11 +3530,11 @@
 
     // Rank + journey quick links
     const rankCard = el("div", "rank-card", `
-      <div class="rank-ic">${ICONS[rank.ic] || rank.icon}</div>
+      <div class="rank-ic">${ic(rank.ic) || rank.icon}</div>
       <div class="rank-mid">
         <div class="rank-name">${rank.name}</div>
         <div class="rank-xpbar"><span style="width:${rankPct()}%"></span></div>
-        <div class="rank-xplbl">${S.xp} XP · ${nr ? "next: " + (ICONS[nr.ic] || nr.icon) + " " + nr.name + " at " + nr.min + " XP" : "max rank reached"}</div>
+        <div class="rank-xplbl">${S.xp} XP · ${nr ? "next: " + (ic(nr.ic) || nr.icon) + " " + nr.name + " at " + nr.min + " XP" : "max rank reached"}</div>
       </div>
       <div class="rank-go">
         <button class="btn-ghost" data-go="map">Journey</button>
@@ -4781,7 +4787,7 @@
         if (cands.length) {
           const best = cands.reduce((a, b) => (b.need - score < a.need - score ? b : a));
           const gap = best.need - score;
-          session.nudge = `<div class="nudge-card"><span class="nudge-ic">${ICONS[best.ic]}</span><div><p class="nudge-t">Just <b>${gap}% more</b> would earn you the <b>${best.name}</b> badge</p><p class="nudge-s">${gap <= 10 ? "You're one clean run away — the retake is free." : "Re-read the chapter and retake — fair play rewards the review."}</p></div></div>`;
+          session.nudge = `<div class="nudge-card"><span class="nudge-ic">${ic(best.ic)}</span><div><p class="nudge-t">Just <b>${gap}% more</b> would earn you the <b>${best.name}</b> badge</p><p class="nudge-s">${gap <= 10 ? "You're one clean run away — the retake is free." : "Re-read the chapter and retake — fair play rewards the review."}</p></div></div>`;
         }
       }
     } else {
