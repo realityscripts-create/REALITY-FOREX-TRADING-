@@ -1218,20 +1218,52 @@ h2 { font-family: var(--font-heading); font-size: clamp(26px, 3.4vw, 38px); font
   .cert-sig { margin-top: 26px; }
 }
 
+/* ============================================================
+   CERTIFICATE PRINT — the trophy, on paper. A4 landscape,
+   full-bleed dark, gold on black — the delivered-PDF standard.
+   ============================================================ */
 @media print {
+  @page { size: A4 landscape; margin: 0; }
+  html, body {
+    background: #0a0a0a !important;
+    margin: 0 !important; padding: 0 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
   /* Print blackout (§9.6): course pages print as a blank page. ONLY the
      certificate (.cert) and a trusted student's own slide (.print-slide)
      are ever visible on paper — and both carry the student ID. */
   body * { visibility: hidden !important; }
-  body { background: #fff; }
-  #view { padding: 0; max-width: none; }
+  body { background: #0a0a0a !important; }
+  #view { padding: 0 !important; max-width: none; }
   .cert, .cert *,
   .print-slide, .print-slide * { visibility: visible !important; }
   .cert, .print-slide { position: absolute; left: 0; top: 0; width: 100%; margin: 0; }
-  .cert {
-    box-shadow: none;
-    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  .cert-wrap { max-width: none !important; margin: 0 !important; padding: 0 !important; }
+  .cert-stage {
+    border-radius: 0 !important; padding: 0 !important; margin: 0 !important;
+    border: none !important; box-shadow: none !important;
+    -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
   }
+  .cert-travel, .cert-glass-halo { display: none !important; }
+  .cert {
+    height: 100vh !important; min-height: 100vh !important;
+    box-sizing: border-box !important; box-shadow: none !important;
+    padding: 42px 70px 40px !important;
+    display: flex; flex-direction: column; justify-content: center;
+    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+  }
+  .cert-border { inset: 10px !important; }
+  .cert-eyebrow { margin-bottom: 10px !important; }
+  .cert-brand { font-size: 38px !important; }
+  .cert-divider { margin: 16px auto 14px !important; }
+  .cert-sub { margin: 10px 0 2px !important; }
+  .cert-sub.cursive { font-size: 17px !important; }
+  .cert-name { font-size: 52px !important; margin: 6px 0 8px !important; }
+  .cert-line { margin: 16px 0 18px !important; }
+  .cert-foot { padding-top: 16px !important; }
+  .cert-sig { margin-top: 22px !important; }
   /* fallback: keep the names readable even if a print driver drops backgrounds */
   .cert-brand, .cert-name {
     background: none;
