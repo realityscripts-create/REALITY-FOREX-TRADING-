@@ -1780,8 +1780,8 @@
       { ic: ICONS.flame, t: "The Trading Challenge", b: "The arena: simulated accounts, institutional rules, and a machine that grades ability, not just profit. Enter a challenge, trade the live feed and the market chart, and the machine measures risk, drawdown, consistency and discipline. Pass, and the reward is machine-signed — a badge and RFX credit paid straight to your wallet. No real money ever touches this floor." },
       { ic: ICONS.moon, t: "The Break Room", b: "A real break, not a tab-switch: a quiet room to unwind between sessions — a nudge after heavy assessments and a place to let a long study session settle. It is chat-safe too: the guard politely refuses phone numbers, addresses and passwords, because staff never ask for those in chat." },
       { ic: ICONS.pen, t: "The Trade Journal", b: "The trader's mirror: log every trade you take — pair, direction, entry, exit, stop, the setup and how you felt while holding it. The machine computes pips, P/L and the R multiple as you type, and the stats rail reads the pattern your memory politely edits. Local-only by design: your journal lives on this device and never leaves it." },
-      { ic: ICONS.note, t: "The Final Examination", b: "The certificate's last door: one paper across all thirteen chapters, drawn fresh from the decks you studied, timed in hours, forward-only, machine-graded. Pass at 70% and the certificate is yours. It can also be run as a live, proctored workshop — same paper, same standard, the room is the difference." },
-      { ic: ICONS.zap, t: "Workshops", b: "The hands-on wing: practical sessions that turn theory into habits. The Risk Workshop makes the 1% rule a reflex, the Psychology Workshop names the ways traders self-destruct, the Journal Workshop wires the habit of logging every trade — each one a principle, a real task, and a check that the skill landed. 25 XP per workshop." },
+      { ic: ICONS.note, t: "The Final Examination", b: "The capstone of your Journey — the final node after Chapter 13. One paper across all thirteen chapters, drawn fresh from the decks you studied, timed in hours, forward-only, machine-graded. Pass at 70% and the certificate is yours. It can also be run as a live, proctored workshop — same paper, same standard, the room is the difference." },
+      { ic: ICONS.zap, t: "Workshops", b: "The hands-on wing: practical sessions where you build, tune and break the machinery instead of just reading about it. The Risk Workshop makes the 1% rule a reflex you can compute in your head; the Moving Averages Workshop is a real workbench — a synthetic market with fast and slow lines you can drag, invert, lag and whipsaw until you feel exactly what tuning does. Each workshop is a principle, a real task, and a check that the skill landed. 25 XP per workshop." },
       { ic: ICONS.clock, t: "The Study Hall", b: "The Academy's always-open room — students gather, share the journey and keep each other pushing. Same rules as every room: one identity, honest chat, and the PII guard watching the door so nothing sensitive is ever posted." },
       { ic: ICONS.quill, t: "The Story", b: "How this OS was actually built — the sleepless nights, the code that broke, the ideas that looked brilliant at midnight and were wrong by morning. It is the honest version of what you're standing in: the confusion and the frustration happened here, in the build, so they never have to happen in your session." },
       { ic: ICONS.grad, t: "The certificate", b: "Finish every chapter, pass every assessment and the final exams, and the certificate is yours — your verified name, your Student ID, drawn in gold. It prints only for students who earned print trust. A certificate from Reality FX means you did the work." },
@@ -6379,8 +6379,141 @@
         { q: "With 150 minutes and 78 questions, your pace is roughly:", options: ["Under 2 minutes per question", "30 seconds per question", "10 minutes per question", "Whatever feels right"], answer: 0, explain: "78 questions in 150 minutes is just under two minutes each — the clock is the referee, pace to it." },
         { q: "The exam's real purpose is:", options: ["To prove you can hold the whole course in one sitting", "To test how fast you can read", "To make you fail", "To fill your afternoon"], answer: 0, explain: "Thirteen chapters, one paper, hours long — stamina and coverage are part of what is being measured." },
         { q: "After a failed sitting, the honest path is:", options: ["Review the chapter breakdown and study the weak chapters", "Sit it again immediately and hope", "Give up", "Blame the questions"], answer: 0, explain: "The result screen shows exactly where you lost the paper — that map is the study plan." }
+      ] },
+    { id: "movingavg", icon: ICONS.chart, title: "The Moving Averages Workshop", tag: "SMA crossovers · build it, tune it, break it", dur: "50 min",
+      desc: "Moving averages are the market's eyewear: the right prescription makes the trend obvious, the wrong one makes the same chart look like noise. This workshop is a real workbench — you build a price series, tune the fast and slow averages, watch the golden and death crosses fire (or misfire), and then deliberately break it to feel exactly what lag, whipsaw and inversion do to a strategy — before you risk a cent.",
+      task: "In the workbench below: run the classic 20/50 setup and read its signals. Then break it on purpose — swap the periods so the fast line is slower than the slow line, shrink both to chase every wiggle, stretch the slow average until it lags — and watch the same market turn from trend to noise. The lesson you keep: the average is a lens, and you are the one who chooses the prescription.",
+      quiz: [
+        { q: "A golden cross is when:", options: ["The fast MA crosses ABOVE the slow MA", "The slow MA crosses above the fast MA", "Price crosses its 200-day average", "Two averages touch and bounce"], answer: 0, explain: "Fast over slow means shorter-term momentum has turned above the longer-term picture — the signal traders call the golden cross." },
+        { q: "A moving average that is too slow will:", options: ["React late — signals fire after the move is over", "React early — signals fire before the move", "Never cross the fast line", "Remove all noise perfectly"], answer: 0, explain: "The longer the window, the more it lags. Smoothness has a price: the late signal." },
+        { q: "A very short fast period (like 2) tends to produce:", options: ["Whipsaws — many false crossovers in chop", "One clean signal per trend", "No signals at all", "Only bullish signals"], answer: 0, explain: "A 2-period line hugs every wiggle, so it crosses the slow line constantly — most of those crosses are noise, not trend." },
+        { q: "If your FAST average has a longer period than your SLOW average, the strategy:", options: ["Inverts — golden crosses become bearish signals", "Works identically", "Becomes impossible to draw", "Improves the win rate"], answer: 0, explain: "You have swapped the roles — the line you call fast is slower than the line you call slow, so every signal flips meaning." },
+        { q: "The crossover strategy's weakness in a sideways range is:", options: ["It buys near the top and sells near the bottom, repeatedly", "It never trades, so it loses nothing", "It makes money in chop", "It needs no stop loss"], answer: 0, explain: "In a range, price crosses the averages back and forth — the strategy buys the highs and sells the lows until the range finally breaks." }
       ] }
   ];
+  /* The Moving Averages workbench — the build-it-and-break-it sandbox.
+     Synthetic price (a seeded random walk with trend + noise), fast/slow SMA
+     overlaid, live cross markers, and a tiny crossover sim that scores the
+     strategy. The student tunes the periods with sliders, then deliberately
+     breaks it with presets (whipsaw, lag, inverted) and watches the same
+     market turn to noise under their own hand. */
+  function maDrillHTML() {
+    return `<div class="panel ws-drill ma-drill">
+        <h3 class="panel-title gold-serif">The workbench — build it, tune it, break it</h3>
+        <p class="ws-quiz-sub">This is a synthetic market you can break. Price moves on its own; the gold line is your <b>fast</b> MA, the grey line your <b>slow</b> MA. Drag the sliders and watch the crosses fire — then hit a <b>break it</b> preset and watch the same market turn to noise under your own hand. The sim at the bottom scores the strategy on every change.</p>
+        <div class="ma-canvas"><svg id="maSvg" viewBox="0 0 760 300" preserveAspectRatio="none" aria-hidden="true"></svg><div class="ma-legend"><span class="ma-l"><i style="background:var(--accent-gold)"></i>Price</span><span class="ma-l"><i style="background:#ffd78c"></i>Fast MA</span><span class="ma-l"><i style="background:#8f8a7a"></i>Slow MA</span><span class="ma-l"><i class="ma-x" style="background:#7ee2a4"></i>Golden cross</span><span class="ma-l"><i class="ma-x" style="background:#f0a69e"></i>Death cross</span></div></div>
+        <div class="ma-controls">
+          <label>Fast MA <input type="range" id="maFast" min="2" max="60" value="10"><b id="maFastV">10</b></label>
+          <label>Slow MA <input type="range" id="maSlow" min="5" max="120" value="30"><b id="maSlowV">30</b></label>
+        </div>
+        <div class="ma-presets">
+          <span class="ma-p-label">Build it / break it:</span>
+          <button class="btn-ghost sm" data-ma="10,30">Classic 10/30</button>
+          <button class="btn-ghost sm" data-ma="2,5">Whipsaw 2/5</button>
+          <button class="btn-ghost sm" data-ma="5,120">Lag 5/120</button>
+          <button class="btn-ghost sm" data-ma="45,10">Inverted 45/10</button>
+          <button class="btn-ghost sm" data-ma="20,50">Smooth 20/50</button>
+        </div>
+        <div class="ma-verdict" id="maVerdict"></div>
+        <div class="ma-stats" id="maStats"></div>
+      </div>`;
+  }
+  function maSeries(seed) {
+    // seeded PRNG so every student breaks the SAME market (mulberry32)
+    let a = seed >>> 0;
+    const rnd = () => { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const n = 120, px = [];
+    let p = 100;
+    for (let i = 0; i < n; i++) {
+      // trend waves + noise — a market, not a sine wave
+      const trend = Math.sin(i / 14) * 0.5 + Math.sin(i / 5) * 0.14;
+      const drift = i < n / 2 ? 0.12 : -0.06;
+      p = p + drift + trend + (rnd() - 0.5) * 1.15;
+      px.push(Math.max(60, p));
+    }
+    return px;
+  }
+  function maVals(px, per) {
+    const out = new Array(px.length).fill(null);
+    let sum = 0;
+    for (let i = 0; i < px.length; i++) {
+      sum += px[i];
+      if (i >= per) sum -= px[i - per];
+      if (i >= per - 1) out[i] = sum / per;
+    }
+    return out;
+  }
+  function wireMaDrill(root) {
+    const px = maSeries(20260815);
+    const svg = root.querySelector("#maSvg");
+    const W = 760, H = 300;
+    const draw = () => {
+      const fast = Math.max(2, Math.min(60, parseInt(root.querySelector("#maFast").value, 10) || 10));
+      const slow = Math.max(5, Math.min(120, parseInt(root.querySelector("#maSlow").value, 10) || 30));
+      root.querySelector("#maFastV").textContent = fast;
+      root.querySelector("#maSlowV").textContent = slow;
+      const f = maVals(px, fast), s = maVals(px, slow);
+      const lo = Math.min.apply(null, px) * 0.985, hi = Math.max.apply(null, px) * 1.015;
+      const X = i => (i / (px.length - 1)) * W, Y = v => H - ((v - lo) / (hi - lo)) * (H - 16) - 8;
+      const line = arr => arr.map((v, i) => (v === null ? null : X(i) + "," + Y(v).toFixed(1))).filter(Boolean).join(" ");
+      // crosses: fast crosses slow -> golden (fast rising through), else death
+      const crosses = [];
+      for (let i = 1; i < px.length; i++) {
+        if (f[i - 1] === null || f[i] === null || s[i - 1] === null || s[i] === null) continue;
+        if ((f[i - 1] <= s[i - 1]) !== (f[i] <= s[i])) {
+          crosses.push({ i, golden: f[i] > s[i], x: X(i), y: Y((f[i] + s[i]) / 2) });
+        }
+      }
+      // crossover sim: long when fast>slow, flat otherwise. Return is
+      // simple (non-compounding) — the strategy captures price moves while
+      // in the market, measured against the first bar — so the number stays
+      // honest no matter how the student tunes it.
+      let pos = 0, eq = 0, trades = 0, wins = 0, entry = 0;
+      for (let i = 1; i < px.length; i++) {
+        const want = f[i] !== null && s[i] !== null && f[i] > s[i] ? 1 : 0;
+        if (want !== pos) {
+          if (pos) { trades++; if (px[i] > entry) wins++; }
+          if (want) { entry = px[i]; }
+          pos = want;
+        }
+        if (pos) eq += (px[i] - px[i - 1]) / px[0] * 100;
+      }
+      if (pos) { trades++; if (px[px.length - 1] > entry) wins++; }
+      // verdict — the machine names what the student's tuning did
+      let verdict, tone = "warn";
+      if (fast >= slow) verdict = "Inverted — your fast line is slower than your slow line, so every cross means the opposite of what you'd expect. The market isn't confused; the lenses are swapped.";
+      else if (fast <= 2 && slow <= 8) verdict = "Whipsaw machine — both lines are so short they chase every wiggle, so crosses fire in clusters and most are noise. Smooth the slow side and the signal count collapses.";
+      else if (slow >= 100 && fast <= 8) verdict = "Lag — the slow MA is so far behind price that crosses fire late, near the end of the move. Smoother, yes; slower, yes — and late signals are the price of smoothness.";
+      else if (fast <= 4) verdict = "Nervous — a very fast line crosses constantly, so the strategy trades often and most of those trades are noise. A wider fast MA filters the wiggle.";
+      else { verdict = "Healthy configuration — the fast line filters the noise, the slow line anchors the trend, and the crosses cluster around real turns. This is what a tuned lens looks like."; tone = "good"; }
+      root.querySelector("#maVerdict").innerHTML = `<div class="ma-verdict-in ${tone}">${verdict}</div>`;
+      const golds = crosses.filter(c => c.golden).length, deaths = crosses.length - golds;
+      root.querySelector("#maStats").innerHTML = `
+        <div class="ma-stat"><b>${crosses.length}</b><span>crosses</span></div>
+        <div class="ma-stat"><b>${golds}</b><span>golden</span></div>
+        <div class="ma-stat"><b>${deaths}</b><span>death</span></div>
+        <div class="ma-stat"><b>${trades}</b><span>trades</span></div>
+        <div class="ma-stat ${eq >= 0 ? "up" : "dn"}"><b>${eq >= 0 ? "+" : ""}${eq.toFixed(1)}%</b><span>sim P/L</span></div>
+        <div class="ma-stat"><b>${trades ? Math.round(100 * wins / trades) : 0}%</b><span>win rate</span></div>`;
+      svg.innerHTML = `
+        <line x1="0" y1="${Y(lo)}" x2="${W}" y2="${Y(lo)}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+        <line x1="0" y1="${Y(hi)}" x2="${W}" y2="${Y(hi)}" stroke="rgba(255,255,255,.06)" stroke-width="1"/>
+        <polyline points="${line(px)}" fill="none" stroke="var(--accent-gold)" stroke-width="1.6" opacity=".92"/>
+        <polyline points="${line(f)}" fill="none" stroke="#ffd78c" stroke-width="1.8"/>
+        <polyline points="${line(s)}" fill="none" stroke="#8f8a7a" stroke-width="2"/>
+        ${crosses.map(c => `<circle cx="${c.x}" cy="${c.y}" r="4" fill="${c.golden ? "#7ee2a4" : "#f0a69e"}" stroke="#0e0d0a" stroke-width="1.4"/>`).join("")}`;
+    };
+    root.querySelector("#maFast").addEventListener("input", draw);
+    root.querySelector("#maSlow").addEventListener("input", draw);
+    root.querySelectorAll("[data-ma]").forEach(b => b.addEventListener("click", function () {
+      const [f, s] = this.getAttribute("data-ma").split(",").map(Number);
+      root.querySelector("#maFast").value = f;
+      root.querySelector("#maSlow").value = s;
+      draw();
+    }));
+    draw();
+  }
+
   function renderWorkshops(root) {
     const done = S.workshops || {};
     root.appendChild(el("div", "page-head", `
@@ -6409,8 +6542,9 @@
   function renderWorkshopDetail(root, w) {
     const done = S.workshops || {};
     const d = done[w.id];
-    const drill = w.id === "risk"
-      ? `<div class="panel ws-drill" id="wsDrill">
+    const drill = w.id === "movingavg" ? maDrillHTML()
+      : w.id === "risk"
+        ? `<div class="panel ws-drill" id="wsDrill">
           <h3 class="panel-title gold-serif">The 1% drill — hands on the rule</h3>
           <p class="ws-quiz-sub">This is the question every student asks: <i>how do I know this trade is 1%?</i> Build a trade below — account, entry, stop, target, size — and the machine answers instantly: the money at risk, the percentage of your account, and whether you're inside the rule. Then prove your own arithmetic: type what <b>you</b> think the risk is and check it.</p>
           <div class="drill-grid">
@@ -6507,6 +6641,19 @@
         box.innerHTML = close
           ? `<div class="warn-note" style="border-color:rgba(80,180,110,.35);background:rgba(80,180,110,.08);color:#9fe3bd">✓ Correct — $${risk$.toFixed(2)} at risk. The formula: (entry − stop) × size = ${(d.side === "long" ? d.e - d.s : d.s - d.e).toFixed(4)} × ${d.units.toLocaleString()}. You can do this before every trade.</div>`
           : `<div class="warn-note">Not quite — $${risk$.toFixed(2)} is the real number. (Entry − stop) × size = ${(d.side === "long" ? d.e - d.s : d.s - d.e).toFixed(4)} × ${d.units.toLocaleString()}. Try once more, then check.</div>`;
+        // The arithmetic-mastered reward: +5 XP the first time the student
+        // proves they can compute the 1% number themselves — the whole point
+        // of the drill. Once per student, tied to the workshop record.
+        if (close) {
+          S.workshops = S.workshops || {};
+          S.workshops[w.id] = S.workshops[w.id] || {};
+          if (!S.workshops[w.id].drill) {
+            S.workshops[w.id].drill = true;
+            addXp(5, "1% drill: arithmetic proven");
+            toast("1% drill mastered — +5 XP", "");
+          }
+          save();
+        }
       };
       ["#dr-bal", "#dr-units", "#dr-entry", "#dr-stop", "#dr-target"].forEach(id => {
         const i = g(id); if (i) i.addEventListener("input", drLive);
@@ -6514,6 +6661,35 @@
       const sideEl = g("#dr-side"); if (sideEl) sideEl.addEventListener("change", drLive);
       const v = g("#drVerify"); if (v) v.addEventListener("click", drVfy);
       drLive();
+    }
+    if (w.id === "movingavg") {
+      wireMaDrill(root);
+      // The break-it moment: the first time the student presses a preset that
+      // degrades the strategy, the machine names what happened — and the first
+      // time they find a healthy configuration, they get the drill's XP.
+      if (!(S.workshops && S.workshops.movingavg && S.workshops.movingavg.drill)) {
+        const presets = root.querySelectorAll("[data-ma]");
+        let healthySeen = false;
+        const check = () => {
+          if (healthySeen) return;
+          const fast = parseInt(root.querySelector("#maFast").value, 10);
+          const slow = parseInt(root.querySelector("#maSlow").value, 10);
+          if (fast >= 5 && fast < slow && slow <= 60) {
+            healthySeen = true;
+            S.workshops = S.workshops || {};
+            S.workshops.movingavg = S.workshops.movingavg || {};
+            if (!S.workshops.movingavg.drill) {
+              S.workshops.movingavg.drill = true;
+              addXp(5, "Moving Averages drill: found a healthy configuration");
+              toast("Workbench mastered — a tuned lens. +5 XP", "");
+            }
+            save();
+          }
+        };
+        root.querySelector("#maFast").addEventListener("input", check);
+        root.querySelector("#maSlow").addEventListener("input", check);
+        presets.forEach(b => b.addEventListener("click", check));
+      }
     }
     const picks = {};
     root.querySelectorAll(".ws-opt").forEach(b => b.addEventListener("click", function () {
@@ -6533,7 +6709,8 @@
       const pass = pct >= 70;
       const wasDone = !!(S.workshops && S.workshops[w.id] && S.workshops[w.id].done);
       S.workshops = S.workshops || {};
-      S.workshops[w.id] = { done: pass || wasDone, score: Math.max((S.workshops[w.id] && S.workshops[w.id].score) || 0, pct), at: new Date().toISOString() };
+      const prev = S.workshops[w.id] || {};
+      S.workshops[w.id] = { done: pass || wasDone, score: Math.max(prev.score || 0, pct), drill: !!prev.drill, at: new Date().toISOString() };
       if (pass && !wasDone) addXp(25, "Workshop completed: " + w.title);
       save();
       const fb = root.querySelector("#wsFeedback");
