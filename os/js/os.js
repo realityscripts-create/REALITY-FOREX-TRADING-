@@ -7,26 +7,9 @@
   "use strict";
 
   const KEY = "rfx_os_v1";
-  /* The Academy launch — 30 September 2026. Before that date the OS carries
-     a quiet countdown banner; on the day it flips to "the doors are open".
-     Static state (no ticking timer — the perf standard bans churn): the
-     banner shows the days remaining when the dashboard renders, and the
-     dashboard re-renders on navigation, so the count is always fresh when
-     seen. */
-  const LAUNCH_DATE = new Date("2026-09-30T00:00:00");
-  function launchState() {
-    const now = new Date();
-    const days = Math.ceil((LAUNCH_DATE.getTime() - now.getTime()) / 86400000);
-    if (days > 0) return { open: false, days: days };
-    return { open: true, days: 0 };
-  }
-  function launchBanner() {
-    const st = launchState();
-    if (st.open) {
-      return `<div class="launch-banner open"><span class="lb-ic">${ICONS.crown}</span><div><b>THE DOORS ARE OPEN</b><p>Reality FX — The Trading Academy is live. Welcome to the first cohort: learn, practise safely, prove competence — then approach the real markets.</p></div></div>`;
-    }
-    return `<div class="launch-banner"><span class="lb-ic">${ICONS.crown}</span><div><b>THE ACADEMY OPENS IN ${st.days} DAY${st.days === 1 ? "" : "S"}</b><p>On 30 September 2026 the classroom opens — 13 chapters, three lanes, a simulated trading environment, workshops, challenges and mentorship. Until then: learn before you risk. This is the better way.</p></div><a class="btn-gold sm" href="${esc(academyUrl("member.html"))}">Reserve your place</a></div>`;
-  }
+  /* The launch countdown lives on the PUBLIC website hero (System A
+     index.html) — the OS is the guarded classroom, so a "Reserve your
+     place" CTA there would only ever reach people already enrolled. */
   const XP_SLIDE = 2, XP_CORRECT = 10, XP_CHAPTER = 40, XP_QUIZ_PASS = 25;
 
   /* ---------- State ---------- */
@@ -3259,8 +3242,11 @@
       ? `<div class="tour-banner"><b>Your free tour has ended</b><p>Your account and your progress are safe and permanent — enroll to keep your Academy access.</p><a class="btn-gold" href="${esc(academyUrl("member.html"))}">Continue to my RFX account →</a></div>`
       : "";
     const fdCard = foundersDayCard();
-    const launchB = isFounder() ? "" : launchBanner();
-    if (founderB || tourB || fdCard || launchB) root.appendChild(el("div", "dash-banners", founderB + tourB + launchB + fdCard));
+    // The launch countdown + Reserve CTA live on the public website hero,
+    // not here — only students already inside the OS would ever see this
+    // room, and a "Reserve your place" button belongs in front of the
+    // people who haven't enrolled yet.
+    if (founderB || tourB || fdCard) root.appendChild(el("div", "dash-banners", founderB + tourB + fdCard));
     root.appendChild(el("div", "dash-hero", `
       <div class="dash-hero-inner">
         <div>

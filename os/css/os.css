@@ -1780,24 +1780,12 @@ input, textarea, [contenteditable="true"], .pause-note { user-select: text; -web
 
 /* dashboard banners — founder master key + demo-tour ended */
 .dash-banners { display: grid; gap: 14px; margin: 22px 4px 26px; }
-.founder-banner, .tour-banner, .launch-banner {
+.founder-banner, .tour-banner {
   display: flex; align-items: center; gap: 16px;
   border-radius: 14px; padding: 16px 20px;
   border: 1px solid rgba(212, 175, 55, .45);
   background: linear-gradient(120deg, rgba(212, 175, 55, .14), rgba(212, 175, 55, .04));
 }
-/* The launch countdown — a quiet gold banner before 30 September 2026,
-   flipping to a short "doors open" state on the day. Static, on-theme,
-   part of the same banner family. */
-.launch-banner { border-color: rgba(212,175,55,.35); background: linear-gradient(120deg, rgba(212,175,55,.10), rgba(212,175,55,.03)); }
-.launch-banner.open { border-color: rgba(126,226,164,.35); background: linear-gradient(120deg, rgba(126,226,164,.10), rgba(126,226,164,.03)); }
-.launch-banner .lb-ic { color: var(--accent-gold-light); flex-shrink: 0; }
-.launch-banner .lb-ic svg { width: 26px; height: 26px; }
-.launch-banner.open .lb-ic svg { filter: drop-shadow(0 0 8px rgba(126,226,164,.6)); }
-.launch-banner b { font-family: var(--font-heading); letter-spacing: 1.5px; color: var(--accent-gold-light); font-size: 13px; }
-.launch-banner.open b { color: #9fe3bd; }
-.launch-banner p { margin: 4px 0 0; font-size: 13px; color: var(--text-muted); line-height: 1.55; }
-.launch-banner .btn-gold { margin-left: auto; flex-shrink: 0; text-decoration: none; }
 .founder-banner .fb-ic { color: var(--accent-gold-light); flex-shrink: 0; }
 .founder-banner .fb-ic svg { width: 30px; height: 30px; filter: drop-shadow(0 0 8px rgba(212, 175, 55, .7)); }
 .founder-banner b { font-family: var(--font-heading); letter-spacing: 2px; color: var(--accent-gold-light); font-size: 13px; }
