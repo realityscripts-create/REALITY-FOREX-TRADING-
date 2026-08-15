@@ -3713,7 +3713,8 @@
           pp.lastDataRequest = { ref: j.ref, kind: kind, at: Date.now() };
           save();
           const st = document.getElementById("pf-data-status");
-          if (st) st.innerHTML = `Filed — reference <b>${esc(j.ref)}</b>. The Registrar will action your request for ${label}.`;
+          const mailed = j.receiptEmail === "sent" ? " A confirmation email is on its way to you." : "";
+          if (st) st.innerHTML = `Filed — reference <b>${esc(j.ref)}</b>. The Registrar will action your request for ${label}.${mailed}`;
           toast("Request filed — reference " + j.ref, "ok");
         })
         .catch(() => {
