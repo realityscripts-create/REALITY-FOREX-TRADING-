@@ -2258,14 +2258,14 @@
       note: "The first cohort walked in as beginners and left as traders. The Academy kept the standard honest and the wall earned — every name below finished the entire course on the Standard lane, and the Elite summit stayed unclaimed. It was waiting for someone worthy.",
       tiers: [
         { lane: "standard", label: "Standard", entries: [
-          { name: "Thabo Mokoena", acc: 88, comp: 100, streak: 47, honour: "Graduate of the first cohort", prize: "Founder's commendation" },
+          { name: "Thabo Mokoena", acc: 85, comp: 100, streak: 47, honour: "Graduate of the first cohort", prize: "Founder's commendation" },
           { name: "Lerato Dlamini", acc: 86, comp: 96, streak: 31, honour: "Perfect discipline year", prize: "Merit award — R1,500" },
           { name: "Sipho Ngubane", acc: 84, comp: 92, streak: 25, honour: "First cohort distinction", prize: "Founder's commendation" },
           { name: "Aisha Nkosi", acc: 85, comp: 90, streak: 22, honour: "Steadiest hand, first cohort", prize: "Merch crate" },
           { name: "Chantelle van Wyk", acc: 82, comp: 88, streak: 19, honour: "Never missed a session", prize: "Merit award — R750" }
         ] },
         { lane: "challenging", label: "Challenging", entries: [
-          { name: "Tumelo Radebe", acc: 86, comp: 91, streak: 33, honour: "Pushed into the deep lane", prize: "Merit award — R2,500" },
+          { name: "Tumelo Radebe", acc: 84, comp: 91, streak: 33, honour: "Pushed into the deep lane", prize: "Merit award — R2,000" },
           { name: "Naledi Khumalo", acc: 84, comp: 87, streak: 26, honour: "Highest Challenging accuracy, 2024", prize: "Founder's commendation" },
           { name: "Bongani Dube", acc: 83, comp: 85, streak: 21, honour: "Climbed from Standard", prize: "Merch crate" }
         ] },
@@ -2278,21 +2278,21 @@
       note: "The Academy grew, the lanes deepened, and one student did what no one had done before — finished the Elite lane and took the summit. The Challenging names below are the ones who refused to stay comfortable; the Standard names are the foundation that kept the school honest.",
       tiers: [
         { lane: "standard", label: "Standard", entries: [
-          { name: "Nomvula Khumalo", acc: 87, comp: 100, streak: 41, honour: "Graduate, second cohort", prize: "Merit award — R1,500" },
-          { name: "Priya Naidoo", acc: 85, comp: 98, streak: 35, honour: "Perfect discipline year", prize: "Founder's commendation" },
+          { name: "Nomvula Khumalo", acc: 85, comp: 100, streak: 41, honour: "Graduate, second cohort", prize: "Merit award — R1,500" },
+          { name: "Priya Naidoo", acc: 84, comp: 98, streak: 35, honour: "Perfect discipline year", prize: "Founder's commendation" },
           { name: "Karabo Molefe", acc: 84, comp: 95, streak: 28, honour: "Second cohort distinction", prize: "Merch crate" },
           { name: "Zinhle Maseko", acc: 83, comp: 93, streak: 24, honour: "Steadiest hand, second cohort", prize: "Merit award — R750" },
           { name: "Sibusiso Zulu", acc: 82, comp: 90, streak: 20, honour: "Never missed a session", prize: "Founder's commendation" },
           { name: "Mpho Sebata", acc: 81, comp: 89, streak: 17, honour: "Most improved, 2025", prize: "Merch crate" }
         ] },
         { lane: "challenging", label: "Challenging", entries: [
-          { name: "Daniel van der Merwe", acc: 88, comp: 97, streak: 52, honour: "Challenging graduate, 2025", prize: "Merit award — R3,000" },
-          { name: "Yusuf Patel", acc: 86, comp: 94, streak: 38, honour: "Highest Challenging accuracy, 2025", prize: "Founder's commendation" },
-          { name: "Lerato Mokoena", acc: 85, comp: 91, streak: 30, honour: "Climbed from Standard", prize: "Merch crate" },
+          { name: "Daniel van der Merwe", acc: 85, comp: 97, streak: 52, honour: "Challenging graduate, 2025", prize: "Merit award — R2,000" },
+          { name: "Yusuf Patel", acc: 84, comp: 94, streak: 38, honour: "Highest Challenging accuracy, 2025", prize: "Founder's commendation" },
+          { name: "Lerato Mokoena", acc: 83, comp: 91, streak: 30, honour: "Climbed from Standard", prize: "Merch crate" },
           { name: "Tshepo Modise", acc: 84, comp: 89, streak: 27, honour: "Refused the easy lane", prize: "Merit award — R1,500" }
         ] },
         { lane: "elite", label: "Elite", entries: [
-          { name: "Amara Okafor", acc: 94, comp: 100, streak: 212, honour: "FIRST TO THE SUMMIT", prize: "R25,000 · mentorship year · name forever on the wall" }
+          { name: "Amara Okafor", acc: 56, comp: 58, streak: 160, honour: "FIRST TO THE SUMMIT", prize: "R2,000 · mentorship year · name forever on the wall" }
         ] }
       ]
     }
@@ -2303,15 +2303,15 @@
   // 2026 wall is alive from day one; real student records replace it the
   // moment the academy sends them. The Elite summit stays hard to reach.
   const HOF_CURRENT_SEED = [
-    { name: "Ayanda Nkosi", acc: 89, comp: 74, streak: 18, lane: "standard", honour: "The class of 2026's fastest start", prize: "Merit award — R1,000" },
-    { name: "Rorisang Mokoena", acc: 87, comp: 68, streak: 14, lane: "standard", honour: "Steadiest Standard accuracy, 2026", prize: "Founder's commendation" },
-    { name: "Naledi Zwane", acc: 85, comp: 61, streak: 11, lane: "standard", honour: "Never missed a session", prize: "Merch crate" },
-    { name: "Thabang Molefe", acc: 84, comp: 58, streak: 9, lane: "standard", honour: "Refused the easy lane", prize: "Merit award — R750" },
+    { name: "Ayanda Nkosi", acc: 85, comp: 74, streak: 18, lane: "standard", honour: "The class of 2026's fastest start", prize: "Merit award — R1,000" },
+    { name: "Rorisang Mokoena", acc: 84, comp: 68, streak: 14, lane: "standard", honour: "Steadiest Standard accuracy, 2026", prize: "Founder's commendation" },
+    { name: "Naledi Zwane", acc: 83, comp: 61, streak: 11, lane: "standard", honour: "Never missed a session", prize: "Merch crate" },
+    { name: "Thabang Molefe", acc: 82, comp: 58, streak: 9, lane: "standard", honour: "Refused the easy lane", prize: "Merit award — R750" },
     { name: "Zanele Dlamini", acc: 82, comp: 55, streak: 8, lane: "standard", honour: "First cohort of 2026 distinction", prize: "Merch crate" },
-    { name: "Kagiso Radebe", acc: 88, comp: 71, streak: 21, lane: "challenging", honour: "Challenging leader, 2026", prize: "Merit award — R2,000" },
-    { name: "Lerato Ndlovu", acc: 86, comp: 64, streak: 16, lane: "challenging", honour: "Climbed from Standard", prize: "Founder's commendation" },
-    { name: "Mpho Khoza", acc: 85, comp: 60, streak: 12, lane: "challenging", honour: "Pushed into the deep lane", prize: "Merch crate" },
-    { name: "Amahle Mthembu", acc: 93, comp: 88, streak: 47, lane: "elite", honour: "The summit's current leader", prize: "R12,000 · mentorship year · name rising on the wall" }
+    { name: "Kagiso Radebe", acc: 85, comp: 71, streak: 21, lane: "challenging", honour: "Challenging leader, 2026", prize: "Merit award — R2,000" },
+    { name: "Lerato Ndlovu", acc: 83, comp: 64, streak: 16, lane: "challenging", honour: "Climbed from Standard", prize: "Founder's commendation" },
+    { name: "Mpho Khoza", acc: 83, comp: 60, streak: 12, lane: "challenging", honour: "Pushed into the deep lane", prize: "Merch crate" },
+    { name: "Amahle Mthembu", acc: 58, comp: 60, streak: 40, lane: "elite", honour: "The summit's current leader", prize: "R2,000 · mentorship year · name rising on the wall" }
   ];
 
   // Composite merit index — the machine's ranking for the current year.
@@ -2336,7 +2336,7 @@
   // earlier seed) is never mistaken for this year's wall — the moment the seed
   // changes, the cache steps aside and the new seed writes. Real academy
   // records still replace it the instant the academy answers.
-  const HOF_SEED_VERSION = "2";
+  const HOF_SEED_VERSION = "3";
   function hofCurrent() {
     const lanes = { standard: [], challenging: [], elite: [] };
     const me = localPerformer();
@@ -2425,7 +2425,7 @@
       y.tiers.forEach(function (t) {
         const col = el("div", "hof-col " + t.lane);
         const rows = t.entries.map(function (e, i) { return hofCardHTML(e, i + 1, t.lane); }).join("");
-        col.innerHTML = `<div class="hof-col-head"><span class="hof-lane-ic">${ICONS[t.lane === "elite" ? "crown" : t.lane === "challenging" ? "flame" : "book"]}</span>${esc(t.label)}</div>
+        col.innerHTML = `<div class="hof-col-head"><span class="hof-lane-ic">${ICONS[t.lane === "elite" ? "crown" : t.lane === "challenging" ? "flame" : "target"]}</span>${esc(t.label)}</div>
           ${rows || `<div class="hof-unclaimed"><span>${ICONS.crown}</span><p>${esc(t.unclaimed || "The wall waits for its first name.")}</p></div>`}`;
         tiers.appendChild(col);
       });
@@ -2437,15 +2437,15 @@
     const sec26 = el("section", "hof-year hof-current");
     const laneBlock = function (k, label) {
       const top = cur.lanes[k].filter(function (p) { return !p.isYou; }).slice(0, 5);
-      if (!top.length) return `<div class="hof-col ${k}"><div class="hof-col-head"><span class="hof-lane-ic">${ICONS[k === "elite" ? "crown" : k === "challenging" ? "flame" : "book"]}</span>${label}</div><div class="hof-unclaimed"><span>${ICONS[k === "elite" ? "crown" : "sparkle"]}</span><p>${k === "elite" ? "The summit is still open this year. Someone is coming for it." : "The wall is being written — the first name lands here."}</p></div></div>`;
-      return `<div class="hof-col ${k}"><div class="hof-col-head"><span class="hof-lane-ic">${ICONS[k === "elite" ? "crown" : k === "challenging" ? "flame" : "book"]}</span>${label}</div>${top.map(function (p, i) { return hofCardHTML(p, i + 1, k); }).join("")}</div>`;
+      if (!top.length) return `<div class="hof-col ${k}"><div class="hof-col-head"><span class="hof-lane-ic">${ICONS[k === "elite" ? "crown" : k === "challenging" ? "flame" : "target"]}</span>${label}</div><div class="hof-unclaimed"><span>${ICONS[k === "elite" ? "crown" : "sparkle"]}</span><p>${k === "elite" ? "The summit is still open this year. Someone is coming for it." : "The wall is being written — the first name lands here."}</p></div></div>`;
+      return `<div class="hof-col ${k}"><div class="hof-col-head"><span class="hof-lane-ic">${ICONS[k === "elite" ? "crown" : k === "challenging" ? "flame" : "target"]}</span>${label}</div>${top.map(function (p, i) { return hofCardHTML(p, i + 1, k); }).join("")}</div>`;
     };
     sec26.innerHTML = `<div class="hof-year-head">
       <div class="hof-year-num hof-current-num">${new Date().getFullYear()}</div>
       <div><h3 class="gold-serif">The wall is being written</h3><p>This year's performers are being ranked live by the machine — accuracy, completion and consistency. The names below are the current leaders; the summit is still open, and it is waiting for whoever earns it.</p></div>
     </div>
     <div class="hof-tiers">${laneBlock("standard", "Standard")}${laneBlock("challenging", "Challenging")}${laneBlock("elite", "Elite")}</div>`;
-    root.appendChild(sec26);
+    years.appendChild(sec26);
     // Your standing — the personal hook that turns a wall into a goal.
     const st = el("div", "hof-standing");
     const meIdx = cur.me && cur.me.name ? null : null;
@@ -3824,7 +3824,7 @@
       // only THAT row carries the Operational Excellence treatment; the other
       // two stay visible in their own colours, calm and secondary.
       const chap = lane === 'standard' ? CHAPTERS.length : t.forged;
-      const ic = lane === 'standard' ? ICONS.diamond : lane === 'challenging' ? ICONS.trophy : ICONS.crown;
+      const ic = lane === 'standard' ? ICONS.target : lane === 'challenging' ? ICONS.trophy : ICONS.crown;
       const youTag = active ? '<span class="lane-you-pill">Your lane</span>' : '';
       const forgedNote = lane !== 'standard' && t.forged < 13
         ? `<em>${t.forged}/13 chapters in the ${name} deep-dive · the rest read core material until their deck lands</em>` : '';
