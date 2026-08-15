@@ -500,6 +500,19 @@
     var store = loadChat();
     var t = String(text || "").trim();
     if (!t) return;
+    // PII guard — the same scan every chat runs. Hard blocks are refused
+    // outright (card numbers, national IDs, passwords, 2FA codes, …);
+    // contact details get a gentle heads-up before the answer.
+    var warnNote = "";
+    if (window.RFXpii) {
+      var dlp = window.RFXpii.scan(t);
+      if (dlp.level === "block") {
+        appendMsg("mentor", "🚫 Not sending that — it looks like " + dlp.found.join(", ") + ". Chats aren't a protected place for sensitive details, and no real RFX team member will ever ask for those here. Ask me anything about trading, though!");
+        inputEl.focus();
+        return;
+      }
+      if (dlp.level === "warn") warnNote = "Quick heads-up: that included " + dlp.found.join(", ") + ". It's your call to share, but chats aren't a protected place for personal details. ";
+    }
     store.msgs.push({ role: "student", text: t });
     saveChat(store);
     appendMsg("student", t);
@@ -524,7 +537,7 @@
       } else {
         reply = respond(t, st);
       }
-      nstore.msgs.push({ role: "mentor", text: reply });
+      nstore.msgs.push({ role: "mentor", text: warnNote + reply });
       saveChat(nstore);
       if (trow.parentNode) trow.parentNode.removeChild(trow);
       appendMsg("mentor", reply);

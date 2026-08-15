@@ -46,6 +46,13 @@
     door:     S('<path d="M3 21h18"/><path d="M7 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/><circle cx="11" cy="12" r="1.4"/>'),
     shieldX:  S('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="9" y1="9.5" x2="15" y2="14.5"/><line x1="15" y1="9.5" x2="9" y2="14.5"/>'),
     scale:    S('<path d="M12 3v18M5 7h14M5 7l-3 6a3.5 3.5 0 0 0 6 0L5 7zM19 7l-3 6a3.5 3.5 0 0 0 6 0l-3-6z"/><line x1="8" y1="21" x2="16" y2="21"/>'),
+    video:    S('<polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/>'),
+    radio:    S('<circle cx="12" cy="12" r="2"/><path d="M16.24 7.76a6 6 0 0 1 0 8.49"/><path d="M7.76 16.24a6 6 0 0 1 0-8.49"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 19.07a10 10 0 0 1 0-14.14"/>'),
+    moon:     S('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'),
+    quill:    S('<path d="M12 19c7 0 9-3 9-9 0-3-2-4-2-4-1-1-5-2-7-1C8 6 6 9 6 12c0 2 1 3 1 3s-1 5-4 6c4 0 7-1 9-2z"/>'),
+    coffee:   S('<path d="M17 8h1a4 4 0 1 1 0 8h-1"/><path d="M3 8h14v9a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4z"/><line x1="6" y1="2" x2="6" y2="4"/><line x1="10" y1="2" x2="10" y2="4"/><line x1="14" y1="2" x2="14" y2="4"/>'),
+    trendDown: S('<polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 18 23 18 23 12"/>'),
+    institution: S('<path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-5h6v5"/><line x1="9" y1="11" x2="9" y2="13"/><line x1="12" y1="11" x2="12" y2="13"/><line x1="15" y1="11" x2="15" y2="13"/>'),
   };
 
   window.OSIcon = function (name, cls) {

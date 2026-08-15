@@ -587,6 +587,52 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   });
 
+  // ── RFX Coupon — the golden ticket, right on the packages page ──
+  // Enter the code and you're routed to the front door with it pre-applied:
+  // the reception validates it, and your course access is claimed there —
+  // then you complete the standard registration like every student. The
+  // coupon is once-and-done; a tour coupon grants limited-time access, so
+  // the full course still belongs to those who earn it.
+  const RECEPTION_URL = (function () {
+    const q = new URLSearchParams(location.search).get('rfx-reception');
+    return (window.RFX_RECEPTION_URL || q || 'http://127.0.0.1:8123').replace(/\/+$/, '');
+  })();
+  const couponBtn = document.getElementById('coupon-btn');
+  if (couponBtn) {
+    couponBtn.addEventListener('click', function () {
+      const overlay = document.createElement('div');
+      overlay.className = 'form-overlay';
+      overlay.innerHTML =
+        '<div class="form-modal rfx-enroll-modal" role="dialog" aria-modal="true" aria-labelledby="rfx-coupon-title">' +
+        '<button type="button" class="rfx-enroll-x" aria-label="Close">✕</button>' +
+        '<div class="rfx-enroll-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2"/><path d="M7 12h10"/><path d="M7 16h6"/></svg></div>' +
+        '<h3 id="rfx-coupon-title">Redeem your Reality FX coupon</h3>' +
+        '<p class="rfx-enroll-hint">Enter the code you were given. If it is valid, your course access is claimed — you\'ll still complete the standard registration, exactly like every student. Coupons are once-and-done.</p>' +
+        '<input class="rfx-enroll-input" id="rfx-coupon-code" placeholder="RFX-K4YLKX" style="text-transform:uppercase;" maxlength="20" autocomplete="off">' +
+        '<div class="rfx-enroll-err" id="rfx-coupon-err"></div>' +
+        '<button type="button" class="btn btn-primary rfx-coupon-go" style="width:100%;">Claim my coupon</button>' +
+        '</div>';
+      document.body.appendChild(overlay);
+      requestAnimationFrame(function () { requestAnimationFrame(function () { overlay.classList.add('visible'); }); });
+      const close = function () {
+        overlay.classList.remove('visible');
+        setTimeout(function () { overlay.remove(); }, 500);
+      };
+      overlay.querySelector('.rfx-enroll-x').addEventListener('click', close);
+      overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+      const input = overlay.querySelector('#rfx-coupon-code');
+      const err = overlay.querySelector('#rfx-coupon-err');
+      const go = function () {
+        const code = input.value.trim().toUpperCase();
+        if (!code) { err.textContent = 'Enter the coupon code you were given.'; return; }
+        window.location.href = RECEPTION_URL + '/index.html?coupon=' + encodeURIComponent(code);
+      };
+      overlay.querySelector('.rfx-coupon-go').addEventListener('click', go);
+      input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); go(); } });
+      setTimeout(function () { try { input.focus(); } catch (e) {} }, 350);
+    });
+  }
+
   // ── Abandoned-cart recovery: welcome wanderers back ──
   checkAbandonedCart();
 
