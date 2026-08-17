@@ -359,6 +359,13 @@ body.nav-open { overflow: hidden; }
 .side-rank .rank-ic { font-size: 26px; }
 .side-rank .rank-name { font-family: var(--font-heading); font-size: 15px; color: var(--accent-gold-light); }
 .side-rank .rank-xp { font-size: 11px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+/* The trader track rung on the sidebar — the same machine-derived rung as
+   the Trading Challenge hub, worn on every room. A quiet gold line: small,
+   precise, never louder than the identity above it. */
+.side-rank .rank-rung { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 10.5px; letter-spacing: .6px; text-transform: uppercase; color: var(--accent-gold-light); font-weight: 600; }
+.side-rank .rank-rung[hidden] { display: none; }
+.side-rank .rank-rung .rr-ic { display: inline-flex; color: var(--accent-gold); }
+.side-rank .rank-rung .rr-ic svg { width: 11px; height: 11px; }
 
 #view { flex: 1; padding: 44px 52px 80px; max-width: 1080px; }
 main { width: 100%; }

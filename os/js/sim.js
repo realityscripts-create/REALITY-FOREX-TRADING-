@@ -833,5 +833,7 @@
       <div class="sim-note">And the boundaries are architectural: demo accounts only, machine-enforced risk caps, no real money ever touches this floor — so the only thing a student can lose is the lesson they refuse to learn.</div>`;
   }
 
-  window.RFXSim = { render: render, challenges: SIM_CHALLENGES };
+  // The rung is exported so the rest of the OS can wear it — the sidebar,
+  // profile and every room show the same machine-derived ladder position.
+  window.RFXSim = { render: render, challenges: SIM_CHALLENGES, rung: trackRung, track: TRACK_RUNGS };
 })();

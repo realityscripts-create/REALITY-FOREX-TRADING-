@@ -1615,6 +1615,21 @@
     if (ic) ic.innerHTML = window.OSIcon ? OSIcon("diamond") : rank.icon; // stroke diamond, not emoji
     if (nm) nm.textContent = rank.name;
     if (xp) xp.textContent = S.xp + " XP · " + progressPct() + "% course";
+    // The trader track rides every room — the same machine-derived rung as
+    // the Trading Challenge hub, so a student always knows where they stand
+    // on the Academy's ladder, not just inside the arena.
+    const rung = document.getElementById("sideRankRung");
+    if (rung) {
+      if (window.RFXSim && typeof window.RFXSim.rung === "function") {
+        const i = window.RFXSim.rung();
+        const r = window.RFXSim.track[i];
+        rung.hidden = false;
+        rung.innerHTML = `<span class="rr-ic">${window.OSIcon ? OSIcon("institution") : ""}</span>${esc(r.name)} · Rung ${i + 1}/5`;
+        rung.title = "Trader track — " + r.cap + ". The machine moves you up on proof.";
+      } else {
+        rung.hidden = true;
+      }
+    }
     // The Live Studio door opens only for verified staff/mentors (or the
     // founder) — students see Live Rooms, never the broadcast controls.
     const studio = document.getElementById("navStudio");
@@ -1884,12 +1899,18 @@
       if (document.title.indexOf("AUDIT RED") === 0) document.title = "Reality FX OS — Student Academy";
       lastRedMsg = "";
     };
-    const run = function () {
+    let auditSeq = 0;
+    const run = function (force) {
       const meta = root.querySelector(".audit-meta");
       if (meta) meta.textContent = "inspecting…";
-      fetch("api/audit", { cache: "no-store" })
+      // The server may re-run the audit for each poll (it is a 20-second walk),
+      // and the local server forks per connection — so two runs can finish out
+      // of order. Only the newest request's answer may paint the wall.
+      const seq = ++auditSeq;
+      fetch("api/audit" + (force ? "?refresh=1" : ""), { cache: "no-store" })
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (j) {
+          if (seq !== auditSeq) return; // a newer run is in flight — ignore this one
           if (!j || !Array.isArray(j.checks)) {
             box.innerHTML = `<div class="audit-status bad">${ICONS.alert} The audit rail did not answer. The machine reports its own outage plainly — every other door still stands.</div>`;
             if (meta) meta.textContent = "rail unreachable — retrying";
@@ -1915,6 +1936,7 @@
           else setRed(j.fails + " finding(s): " + j.checks.filter(function (c) { return !c.ok; }).map(function (c) { return c.name; }).join(", "));
         })
         .catch(function () {
+          if (seq !== auditSeq) return;
           box.innerHTML = `<div class="audit-status bad">${ICONS.alert} The audit rail is unreachable. The machine reports its own outage plainly — every other door still stands.</div>`;
           if (meta) meta.textContent = "rail unreachable — retrying";
           setRed("the audit rail is unreachable");
@@ -1923,7 +1945,7 @@
     run();
     loadIncidents();
     const btn = root.querySelector("#auditRun");
-    if (btn) btn.addEventListener("click", function () { run(); loadIncidents(); });
+    if (btn) btn.addEventListener("click", function () { run(true); loadIncidents(); });
     if (timer) clearInterval(timer);
     timer = setInterval(function () { if (!document.hidden) { run(); loadIncidents(); } }, 60000);
     root.__auditTimer = timer;
