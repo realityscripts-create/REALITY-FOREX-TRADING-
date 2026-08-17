@@ -6081,29 +6081,138 @@
     `));
   }
 
+  /* ============================================================
+     CERTIFICATE — the founder's concept art, made live.
+     The certificate's visual base is the approved concept design
+     (crown, crest ribbon, RX seal, double frame) rendered as a
+     raster with the five dynamic fields erased: recipient name,
+     the course-details line, the issue date (value + long form)
+     and the Certificate ID. The live student record overlays
+     those exact positions, so the trophy in the room is the
+     trophy on paper. Every certificate carries a unique
+     credential ID (RFX-<year>-<hex>) and a QR code pointing at
+     its public verification record — scan to verify, no login.
+     One markup source (certMarkup) feeds the room, the locked
+     trophy-case preview, and the printed page, and the print CSS
+     is self-contained so printing never depends on the OS.
+     ============================================================ */
+  const CERT_ASSET = "assets/cert-base.png";
+  const CERT_VERIFY_HOST = "www.realityfxacademy.com";
+  function certAssetUrl() {
+    try { return new URL(CERT_ASSET, location.href).href; } catch (e) { return CERT_ASSET; }
+  }
+  function certVerifyURL(code) {
+    return "https://" + CERT_VERIFY_HOST + "/verify/" + encodeURIComponent(code || "");
+  }
+  /* Render the verification QR as a compact SVG (module runs). The QR
+     contains only the public verification URL — never student data —
+     and points at the official registry, so a copied QR always shows
+     the true holder, exposing any fake certificate immediately. */
+  function certQRSvg(url) {
+    try {
+      if (typeof qrcode !== "function") return "";
+      const q = qrcode(0, "M");
+      q.addData(url); q.make();
+      const n = q.getModuleCount(), s = 100 / n;
+      let d = "";
+      for (let r = 0; r < n; r++) {
+        let c = 0;
+        while (c < n) {
+          if (q.isDark(r, c)) {
+            const c0 = c;
+            while (c < n && q.isDark(r, c)) c++;
+            const w = (c - c0) * s;
+            d += "M" + (c0 * s).toFixed(3) + " " + (r * s).toFixed(3) + "h" + w.toFixed(3) + "v" + s.toFixed(3) + "h-" + w.toFixed(3) + "z";
+          } else c++;
+        }
+      }
+      return '<svg viewBox="0 0 100 100" shape-rendering="crispEdges" role="img" aria-label="Scan to verify this credential"><path d="' + d + '"/></svg>';
+    } catch (e) { return ""; }
+  }
+  const CERT_PRINT_CSS = `
+:root{--gold:#D8AA52;--gold2:#C9A63F;--ink:#ECEAE3;--serif:"Playfair Display",Georgia,serif;--sans:Inter,system-ui,sans-serif}
+@page{size:A4 landscape;margin:0}
+html,body{margin:0;padding:0;background:#0a0a0a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.cert{position:relative;container-type:inline-size;width:100vw;height:100vh;background:#0a0a0a;overflow:hidden}
+.cert-bg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.cert-name{position:absolute;left:19.4%;top:38.6%;width:62.6%;height:6.3%;display:flex;align-items:center;justify-content:center;text-align:center;font-family:var(--serif);font-weight:700;font-size:5.9cqw;letter-spacing:.10em;line-height:1;color:var(--gold);white-space:nowrap;text-shadow:0 0 14px rgba(216,170,82,.28)}
+.cert-details{position:absolute;left:15%;top:59.7%;width:70%;height:2.2%;display:flex;align-items:center;justify-content:center;text-align:center;font-family:var(--sans);font-weight:600;font-size:1.15cqw;letter-spacing:.05em;line-height:1;color:var(--gold2);white-space:nowrap;text-transform:uppercase}
+.cert-details b{color:#E8C878;font-weight:600}
+.cert-date-val{position:absolute;left:15.68%;top:78.9%;width:11.4%;height:2.5%;display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-weight:600;font-size:1.5cqw;letter-spacing:.05em;line-height:1;color:var(--ink);white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.cert-date-sub{position:absolute;left:17.2%;top:83.3%;width:8.5%;height:1.4%;display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-weight:600;font-size:.8cqw;letter-spacing:.14em;line-height:1;color:var(--gold2);white-space:nowrap;text-transform:uppercase}
+.cert-id-val{position:absolute;left:73.8%;top:78.9%;width:11.7%;height:2.5%;display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-weight:600;font-size:1.28cqw;letter-spacing:.03em;line-height:1;color:var(--ink);white-space:nowrap;text-shadow:0 1px 2px rgba(0,0,0,.4)}
+.cert-qr{position:absolute;left:84.8%;top:5.6%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cert-qr-tile{position:relative;width:4.9cqw;aspect-ratio:1;background:#0b0b0b;border:1px solid rgba(212,175,55,.75);border-radius:.5cqw;box-shadow:0 2px 10px rgba(0,0,0,.6)}
+.cert-qr-tile svg{position:absolute;inset:.42cqw;width:calc(100% - .84cqw);height:calc(100% - .84cqw)}
+.cert-qr-tile svg path{fill:#D8AA52}
+.cert-qr-cap{font-family:var(--sans);font-weight:600;font-size:.6cqw;letter-spacing:.16em;color:var(--gold2);margin-top:.5cqw;white-space:nowrap}
+.cert-dim{opacity:.5;filter:grayscale(.15)}
+.cert-stamp{position:absolute;left:34%;top:52%;width:32%;transform:rotate(-16deg);border:2px solid rgba(216,170,82,.85);color:rgba(216,170,82,.92);font-family:var(--sans);font-weight:700;font-size:2.4cqw;letter-spacing:.22em;text-align:center;padding:1.1cqw 0;border-radius:.6cqw;text-transform:uppercase;box-shadow:0 0 22px rgba(216,170,82,.25)}
+`;
+  function certMarkup(d) {
+    const code = d.code || "";
+    const qrSvg = !d.stamp && code ? certQRSvg(certVerifyURL(code)) : "";
+    return `<div class="cert${d.stamp ? " cert-dim" : ""}">
+  <img class="cert-bg" src="${esc(d.assetUrl || CERT_ASSET)}" alt="Reality FX certificate">
+  <div class="cert-name">${esc(d.name || "")}</div>
+  <div class="cert-details">${d.meta || ""}</div>
+  <div class="cert-date-val">${d.dateShort ? esc(d.dateShort) : ""}</div>
+  <div class="cert-date-sub">${d.dateLong ? esc(d.dateLong) : ""}</div>
+  <div class="cert-id-val">${esc(code)}</div>
+  ${qrSvg ? `<div class="cert-qr"><span class="cert-qr-tile">${qrSvg}</span><span class="cert-qr-cap">SCAN TO VERIFY</span></div>` : ""}
+  ${d.stamp ? `<div class="cert-stamp">NOT YET EARNED</div>` : ""}
+</div>`;
+  }
+
+  function certValueCards(locked) {
+    const cards = [
+      { ic: ICONS.medal, t: "Competence, certified", d: "This is a competency credential, not a completion slip. It records what you can demonstrably do to the Academy's standard — trained, assessed, tested, challenged, and machine-graded." },
+      { ic: ICONS.key, t: "One identity, forever", d: "Every certificate carries a unique Certificate ID, minted from the identity System A verified at registration. Never reused, never reassigned — it points back to one person." },
+      { ic: ICONS.robot, t: "Graded by the machine", d: "Every assessment behind it was graded by the machine, not a mood: accuracy tracked, progression gates enforced, the Final Examination timed, one-way, and ungameable." },
+      { ic: ICONS.shield, t: "Built to be verified", d: "The credential is designed for independent online verification. The registry goes live with the Academy — anyone can confirm this certificate was genuinely issued by Reality FX." }
+    ];
+    return `<div class="cert-value">
+      <h2 class="gold-serif">${locked ? "What the certificate means" : "What this certificate contains"}</h2>
+      <div class="cert-value-grid">
+        ${cards.map(c => `<div class="cert-value-card"><span class="cert-value-ic">${c.ic}</span><div><b>${esc(c.t)}</b><p>${c.d}</p></div></div>`).join("")}
+      </div>
+      <p class="cert-value-note">The certificate is the record. The competence behind it is the achievement.</p>
+    </div>`;
+  }
+
   function renderCertificate(root) {
     const pct = progressPct();
     const exam = examPassed();
+    const name = profileName() || "Reality FX Student";
+    const p = profile(); ensureCode(p);
+    const code = credId(p, name);
     if (pct < 100 || !exam) {
       const chLeft = 13 - CHAPTERS.filter(isComplete).length;
-      root.appendChild(el("div", "cert-locked", `
-        <div class="finish-ic">${ICONS.lockOpen}</div>
-        <h2 class="gold-serif">Your certificate awaits</h2>
-        <p>${pct < 100
-          ? `Complete all 13 chapters — ${chLeft} remaining — then pass the Final Examination to unlock your Reality FX Academy certificate.`
-          : `Every chapter is complete. One last door: pass the Final Examination (${EXAM_PASS}% or better) and the certificate is yours.`}</p>
-        <div class="cert-progress big"><span style="width:${pct}%"></span></div>
-        <button class="btn-gold" data-go="${pct < 100 ? "map" : "exam"}">${pct < 100 ? "Back to the journey" : "Begin the Final Examination"}</button>`));
+      const meta = `THE RFX FULL COURSE &nbsp;|&nbsp; 13 CHAPTERS &nbsp;|&nbsp; <b>${Math.round(pct)}% COMPLETE</b>`;
+      root.appendChild(el("div", "cert-wrap", `
+        <div class="cert-stage">
+          <span class="cert-travel"></span>
+          <span class="cert-travel cert-travel-2"></span>
+          <span class="cert-glass-halo"></span>
+          ${certMarkup({ name, code, meta, dateShort: "", dateLong: "", idSub: "Student ID", badges: "", stamp: true })}
+        </div>
+        <div class="cert-locked">
+          <h2 class="gold-serif">Your certificate awaits</h2>
+          <p>${pct < 100
+            ? `Complete all 13 chapters — ${chLeft} remaining — then pass the Final Examination, and the stamp lifts.`
+            : `Every chapter is complete. One last door: pass the Final Examination (${EXAM_PASS}% or better) and the certificate is yours.`}</p>
+          <div class="cert-progress big"><span style="width:${pct}%"></span></div>
+          <button class="btn-gold" data-go="${pct < 100 ? "map" : "exam"}">${pct < 100 ? "Back to the journey" : "Begin the Final Examination"}</button>`));
       root.querySelector("[data-go]").addEventListener("click", () => location.hash = pct < 100 ? "#/map" : "#/exam");
+      root.appendChild(el("div", "", certValueCards(true)));
       return;
     }
-    const name = profileName() || "Reality FX Student";
     const today = new Date();
     const dateLong = today.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
     const dateShort = today.getFullYear() + " - " + String(today.getMonth() + 1).padStart(2, "0") + " - " + String(today.getDate()).padStart(2, "0");
-    const p = profile(); ensureCode(p);
-    const code = p.code || certCode(name);
     const xp = S.xp, rank = rankFor(S.xp);
+    const meta = `THE RFX FULL COURSE &nbsp;|&nbsp; 13 CHAPTERS &nbsp;|&nbsp; <b>${xp} XP</b> &nbsp;|&nbsp; RANK: <b>${esc(rank.name)}</b> &nbsp;|&nbsp; FINAL EXAMINATION: <b>PASSED</b>`;
     const certKeys = [...earnedBadgeKeys()];
     const certBadges = certKeys.length
       ? `<div class="cert-badge-row"><p class="cert-label">Earned badges</p><div>${certKeys.map(k => `<span class="cert-badge" title="${esc(BADGES[k].name)}">${badgeIc(k)}</span>`).join("")}</div></div>`
@@ -6113,42 +6222,11 @@
         <span class="cert-travel"></span>
         <span class="cert-travel cert-travel-2"></span>
         <span class="cert-glass-halo"></span>
-      <div class="cert">
-        <div class="cert-border"></div>
-        <span class="cert-corner tl">◆</span><span class="cert-corner tr">◆</span><span class="cert-corner bl">◆</span><span class="cert-corner br">◆</span>
-        <p class="cert-eyebrow">The Reality FX Academy</p>
-        <h1 class="cert-brand gold-serif">REALITY FOREX<br>TRADING ACADEMY</h1>
-        <div class="cert-divider"><span></span></div>
-        <p class="cert-sub cursive">This certificate is proud to certify that</p>
-        <h2 class="cert-name gold-serif">${esc(name)}</h2>
-        <div class="cert-underline"></div>
-        <p class="cert-sub cursive">has successfully completed the</p>
-        <h3 class="cert-course">Reality Forex Trading Course</h3>
-        <p class="cert-course-sub">The RFX Full Course — 13 Chapters · ${xp} XP · Rank: ${rank.name}${examPassed() ? " · Final Examination: passed" : ""}</p>
-        ${certBadges}
-        <p class="cert-line">“${esc(QUOTE)}”</p>
-        <div class="cert-foot">
-          <div class="cert-col">
-            <p class="cert-label">Date</p>
-            <p class="cert-val">${esc(dateShort)}</p>
-            <p class="cert-val-sub">${esc(dateLong)}</p>
-          </div>
-          <div class="cert-seal"><span>RFX</span></div>
-          <div class="cert-col right">
-            <p class="cert-label">Certificate ID</p>
-            <p class="cert-val">${code}</p>
-            <p class="cert-val-sub">${handoffRec() ? "Verified Student ID" : "Student Code · Phase 2"}</p>
-          </div>
-        </div>
-        <div class="cert-sig">
-          <p class="cert-sig-name">Leeroy Chirwa</p>
-          <div class="cert-sig-line"></div>
-          <p class="cert-label">Founder · Reality FX</p>
-        </div>
-      </div>
+        ${certMarkup({ name, code, meta, dateShort, dateLong, idSub: handoffRec() ? "Verified Student ID" : "Student Code · Phase 2", badges: certBadges, stamp: false })}
       </div>
       <button class="btn-gold" id="certPrint">${ICONS.download} Print certificate (PDF)</button>`));
     root.querySelector("#certPrint").addEventListener("click", () => printCertificate());
+    root.appendChild(el("div", "", certValueCards(false)));
   }
   /* The trophy, on paper — a self-contained A4-landscape certificate page
      built from the student's live record (same markup + styles as the
@@ -6158,7 +6236,7 @@
   function printCertificate() {
     const name = profileName() || "Reality FX Student";
     const p = profile(); ensureCode(p);
-    const code = p.code || certCode(name);
+    const code = credId(p, name);
     const xp = S.xp, rank = rankFor(S.xp);
     const today = new Date();
     const dateLong = today.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
@@ -6176,73 +6254,40 @@
   /* The standalone certificate document — self-contained CSS, zero JS
      dependencies, A4 landscape, full-bleed dark. This exact page is what
      the delivered PDF was printed from. */
+  /* The standalone certificate document — self-contained CSS, zero JS
+     dependencies, A4 landscape, full-bleed dark. This exact page is what
+     the delivered PDF is printed from. Built from the same certMarkup the
+     room renders, so the trophy on paper is the trophy on screen. */
   function certPageHTML(d) {
     const escAttr = s => esc(s).replace(/"/g, "&quot;");
+    const meta = `THE RFX FULL COURSE &nbsp;|&nbsp; 13 CHAPTERS &nbsp;|&nbsp; <b>${d.xp} XP</b> &nbsp;|&nbsp; RANK: <b>${esc(d.rank.name)}</b>${d.examLine ? " &nbsp;|&nbsp; FINAL EXAMINATION: <b>PASSED</b>" : ""}`;
     return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><title>Reality FX — Certificate — ${escAttr(d.name)}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg-primary:#0A0A0A;--text-dim:#8a8577;--accent-gold:#D4AF37;--accent-gold-light:#E6C565;--grad-gold:linear-gradient(135deg,#F0D98C 0%,#D4AF37 45%,#A8842A 100%);--font-heading:"Playfair Display",Georgia,serif;--font-quote:"Playfair Display",Georgia,serif;--font-body:Inter,system-ui,sans-serif}
-@page{size:A4 landscape;margin:0}
-html,body{margin:0;padding:0;background:#0a0a0a;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-body{display:flex;align-items:center;justify-content:center;min-height:100vh}
-.cert{position:relative;box-sizing:border-box;width:100vw;height:100vh;padding:40px 70px 38px;display:flex;flex-direction:column;justify-content:center;background:radial-gradient(120% 80% at 50% 0%,rgba(201,162,39,.10),transparent 55%),linear-gradient(165deg,#16130c 0%,#0d0c08 55%,#0a0906 100%);border:1px solid rgba(201,162,39,.35);border-radius:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.04);overflow:hidden;text-align:center}
-.cert-border{position:absolute;inset:10px;border:1px solid rgba(201,162,39,.55);outline:1px solid rgba(201,162,39,.18);outline-offset:5px;pointer-events:none}
-.cert-corner{position:absolute;color:rgba(201,162,39,.75);font-size:12px}
-.cert-corner.tl{top:20px;left:24px}.cert-corner.tr{top:20px;right:24px}.cert-corner.bl{bottom:20px;left:24px}.cert-corner.br{bottom:20px;right:24px}
-.cert-eyebrow{font-size:11px;letter-spacing:6px;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px}
-.cert-brand{font-size:38px;letter-spacing:5px;font-weight:700;line-height:1.28;font-family:var(--font-heading);background:var(--grad-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--accent-gold-light)}
-.cert-divider{display:flex;align-items:center;gap:14px;margin:16px auto 14px;width:260px}
-.cert-divider::before,.cert-divider::after{content:"";height:1px;flex:1;background:linear-gradient(90deg,transparent,rgba(201,162,39,.6))}
-.cert-divider span{width:7px;height:7px;transform:rotate(45deg);background:var(--accent-gold)}
-.cert-sub{font-size:12.5px;letter-spacing:2.5px;text-transform:uppercase;color:#b9b2a2;margin:12px 0 3px}
-.cert-sub.cursive{font-family:var(--font-quote);font-style:italic;font-weight:500;font-size:18px;letter-spacing:.5px;text-transform:none;color:#d6d0c0}
-.cert-name{font-size:54px;font-weight:700;margin:6px 0 8px;font-family:var(--font-heading);background:var(--grad-gold);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--accent-gold-light)}
-.cert-underline{width:230px;height:1px;margin:0 auto 6px;background:linear-gradient(90deg,transparent,rgba(201,162,39,.7),transparent)}
-.cert-course{font-family:var(--font-heading);font-size:25px;color:#efe9d8;margin-top:8px;font-weight:600}
-.cert-course-sub{font-size:11.5px;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-top:8px}
-.cert-badges-print{margin-top:12px;display:grid;gap:6px}.cert-badges-print .cert-label{margin-bottom:4px}.cert-badge-row .cert-label{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#8a8577}.cert-badge-row>div{display:flex;justify-content:center;gap:8px;flex-wrap:wrap}.cert-badge{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;border:1px solid rgba(201,162,39,.45);background:radial-gradient(circle at 35% 30%,rgba(201,162,39,.18),rgba(201,162,39,.04) 70%);color:var(--accent-gold-light)}.cert-badge svg{width:18px;height:18px}
-.cert-line{font-family:var(--font-quote);font-style:italic;font-size:18px;color:rgba(229,193,88,.85);margin:16px 0 18px}
-.cert-foot{display:flex;justify-content:space-between;align-items:center;gap:20px;border-top:1px solid rgba(201,162,39,.25);padding-top:16px;text-align:left}
-.cert-col{min-width:150px}.cert-col.right{text-align:right}
-.cert-label{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:#8a8577}
-.cert-val{font-family:var(--font-body);font-weight:600;font-size:15px;color:#FFFFFF;margin-top:5px;letter-spacing:1px;font-variant-numeric:tabular-nums}
-.cert-val-sub{font-size:10px;color:var(--text-dim);margin-top:2px}
-.cert-seal{width:88px;height:88px;border-radius:50%;flex-shrink:0;display:grid;place-items:center;position:relative;background:repeating-conic-gradient(rgba(201,162,39,.5) 0deg 12deg,rgba(201,162,39,.12) 12deg 24deg);border:1px solid rgba(201,162,39,.5)}
-.cert-seal::before{content:"";position:absolute;inset:6px;border-radius:50%;border:1px solid rgba(201,162,39,.6);background:radial-gradient(circle at 35% 30%,#1d180d,#0d0c08 70%)}
-.cert-seal span{font-family:var(--font-heading);font-size:17px;font-weight:700;color:var(--accent-gold);letter-spacing:1px}
-.cert-sig{margin-top:22px}
-.cert-sig-name{font-family:var(--font-quote);font-style:italic;font-size:19px;color:#efe9d8;margin-bottom:2px}
-.cert-sig-line{width:210px;height:1px;margin:8px auto 6px;background:linear-gradient(90deg,transparent,rgba(201,162,39,.7),transparent)}
+${CERT_PRINT_CSS}
 </style></head><body>
-<div class="cert"><div class="cert-border"></div>
-<span class="cert-corner tl">◆</span><span class="cert-corner tr">◆</span><span class="cert-corner bl">◆</span><span class="cert-corner br">◆</span>
-<p class="cert-eyebrow">The Reality FX Academy</p>
-<h1 class="cert-brand">REALITY FOREX<br>TRADING ACADEMY</h1>
-<div class="cert-divider"><span></span></div>
-<p class="cert-sub cursive">This certificate is proud to certify that</p>
-<h2 class="cert-name">${esc(d.name)}</h2>
-<div class="cert-underline"></div>
-<p class="cert-sub cursive">has successfully completed the</p>
-<h3 class="cert-course">Reality Forex Trading Course</h3>
-<p class="cert-course-sub">The RFX Full Course — 13 Chapters · ${d.xp} XP · Rank: ${esc(d.rank.name)}${d.examLine}</p>
-${d.badges}
-<p class="cert-line">“Every lesson is a trade. Every trade is a lesson.”</p>
-<div class="cert-foot">
-<div class="cert-col"><p class="cert-label">Date</p><p class="cert-val">${esc(d.dateShort)}</p><p class="cert-val-sub">${esc(d.dateLong)}</p></div>
-<div class="cert-seal"><span>RFX</span></div>
-<div class="cert-col right"><p class="cert-label">Certificate ID</p><p class="cert-val">${esc(d.code)}</p><p class="cert-val-sub">${handoffRec() ? "Verified Student ID" : "Student Code · Phase 2"}</p></div>
-</div>
-<div class="cert-sig"><p class="cert-sig-name">Leeroy Chirwa</p><div class="cert-sig-line"></div><p class="cert-label">Founder · Reality FX</p></div>
-</div>
+${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLong: d.dateLong, idSub: handoffRec() ? "Verified Student ID" : "Student Code · Phase 2", badges: d.badges, stamp: false, assetUrl: certAssetUrl() })}
 </body></html>`;
   }
+  /* The credential ID — RFX-<year>-<hex> — minted deterministically from
+     the verified identity so the same student always resolves to the same
+     credential, and never reused across students. This is the ID the QR
+     encodes and the verification registry looks up. */
   function certCode(name) {
     let h = 0;
     const s = (name || "student").toUpperCase() + "-RFX13";
     for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-    return "RFX-" + h.toString(16).toUpperCase().slice(0, 8);
+    const year = 2026; // the Academy's opening year — the minted ID is stable for the life of the credential
+    return "RFX-" + year + "-" + h.toString(16).toUpperCase().padStart(6, "0").slice(0, 6);
+  }
+  /* The credential ID in current minting format; legacy short IDs minted
+     before the year-prefix scheme are re-derived so every certificate is
+     RFX-<year>-<hex>, the exact ID the verification QR encodes. */
+  function credId(p, name) {
+    const c = (p && p.code) || "";
+    return /^RFX-\d{4}-/.test(c) ? c : certCode(name);
   }
 
   /* ============================================================
