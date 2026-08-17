@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reality FX — Credential Verification</title>
+<meta name="description" content="Verify an RFX credential against the official Reality FX Academy registry. Scan to verify — no login, no account, no personal data.">
+<meta name="theme-color" content="#0A0A0A">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M4 16.5 L3 7 L9 11 L12 5 L15 11 L21 7 L20 16.5 Z' fill='%23D4AF37'/><rect x='2' y='16.5' width='20' height='2' rx='1' fill='%23D4AF37'/></svg>">
+<style>
+:root{
+  --bg:#0a0a0a;--panel:#0e0d0a;--gold:#D8AA52;--gold2:#C9A63F;--gold-soft:rgba(216,170,82,.55);
+  --ink:#ECEAE3;--muted:#9a948a;--line:rgba(216,170,82,.28);
+  --red:#c25a4a;--red-soft:rgba(194,90,74,.55);
+  --serif:"Playfair Display",Georgia,serif;--sans:Inter,system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:28px 16px 40px;
+  background:
+    radial-gradient(1200px 520px at 50% -8%, rgba(216,170,82,.10), transparent 62%),
+    radial-gradient(900px 500px at 50% 118%, rgba(216,170,82,.05), transparent 60%),
+    var(--bg);}
+.wrap{width:100%;max-width:560px}
+/* ---------- brand ---------- */
+.brand{display:flex;flex-direction:column;align-items:center;margin-bottom:26px}
+.brand-crown{width:46px;height:46px;color:var(--gold);filter:drop-shadow(0 0 12px rgba(216,170,82,.45));margin-bottom:10px}
+.brand-name{font-family:var(--serif);font-weight:700;font-size:26px;letter-spacing:.16em;color:var(--gold);
+  background:linear-gradient(180deg,#f0d98c,#d4af37 55%,#a8842a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.brand-sub{font-size:10px;letter-spacing:.42em;color:var(--gold2);text-transform:uppercase;margin-top:7px;text-align:center}
+.brand-line{width:120px;height:1px;margin:14px auto 0;background:linear-gradient(90deg,transparent,var(--gold-soft),transparent)}
+/* ---------- card shell ---------- */
+.card{position:relative;background:linear-gradient(180deg,#121008,#0e0d0a 60%);border:1px solid var(--line);
+  border-radius:16px;padding:30px 26px;box-shadow:0 24px 60px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.4), 0 0 34px rgba(216,170,82,.06);overflow:hidden}
+.card::before{content:"";position:absolute;inset:8px;border:1px solid rgba(216,170,82,.14);border-radius:11px;pointer-events:none}
+.card-corner{position:absolute;width:14px;height:14px;border-color:var(--gold-soft);border-style:solid;border-width:0}
+.card-corner.tl{top:9px;left:9px;border-top-width:1px;border-left-width:1px;border-top-left-radius:5px}
+.card-corner.tr{top:9px;right:9px;border-top-width:1px;border-right-width:1px;border-top-right-radius:5px}
+.card-corner.bl{bottom:9px;left:9px;border-bottom-width:1px;border-left-width:1px;border-bottom-left-radius:5px}
+.card-corner.br{bottom:9px;right:9px;border-bottom-width:1px;border-right-width:1px;border-bottom-right-radius:5px}
+/* ---------- eyebrow + h1 ---------- */
+.eyebrow{font-size:10px;letter-spacing:.34em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:10px}
+h1.verdict{font-family:var(--serif);font-weight:700;font-size:30px;text-align:center;letter-spacing:.04em;line-height:1.15;margin-bottom:8px}
+.verdict.gold{color:var(--gold);text-shadow:0 0 22px rgba(216,170,82,.35)}
+.verdict.neutral{color:#cfc9bd}
+.verdict.revoked{color:#e08a7a;text-shadow:0 0 22px rgba(194,90,74,.3)}
+.lede{font-size:14px;line-height:1.65;color:var(--muted);text-align:center;max-width:420px;margin:0 auto 20px}
+/* ---------- status pill ---------- */
+.pill{display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border-radius:999px;border:1px solid;
+  font-size:11px;font-weight:700;letter-spacing:.22em;text-transform:uppercase;margin:2px auto 20px}
+.pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 8px currentColor}
+.pill.valid{color:var(--gold);border-color:rgba(216,170,82,.5);background:rgba(216,170,82,.07)}
+.pill.revoked{color:#e08a7a;border-color:rgba(194,90,74,.5);background:rgba(194,90,74,.08)}
+.pill.missing{color:#cfc9bd;border-color:rgba(207,201,189,.3);background:rgba(207,201,189,.05)}
+/* ---------- record rows ---------- */
+.record{display:flex;flex-direction:column;gap:0;margin:18px 0 6px}
+.row{display:flex;justify-content:space-between;align-items:baseline;gap:16px;padding:12px 2px;border-bottom:1px solid rgba(216,170,82,.10)}
+.row:last-child{border-bottom:none}
+.row .k{font-size:10px;letter-spacing:.26em;text-transform:uppercase;color:var(--muted);white-space:nowrap;flex-shrink:0}
+.row .v{font-size:15px;font-weight:600;color:var(--ink);text-align:right;word-break:break-word}
+.row .v.name{font-family:var(--serif);font-weight:700;color:var(--gold);font-size:17px}
+/* ---------- verify-another ---------- */
+.verify-another{margin-top:22px;padding-top:20px;border-top:1px dashed rgba(216,170,82,.22)}
+.va-label{font-size:10px;letter-spacing:.3em;text-transform:uppercase;color:var(--muted);text-align:center;margin-bottom:12px}
+.lookup{display:flex;gap:8px}
+.lookup input{flex:1;min-width:0;background:#0b0b0b;border:1px solid rgba(216,170,82,.3);border-radius:9px;color:var(--ink);
+  font-family:var(--sans);font-size:14px;font-weight:600;letter-spacing:.04em;padding:12px 14px;outline:none;text-transform:uppercase}
+.lookup input::placeholder{color:#5d584f;font-weight:500;letter-spacing:.06em;text-transform:none}
+.lookup input:focus{border-color:rgba(216,170,82,.7);box-shadow:0 0 0 3px rgba(216,170,82,.12)}
+.lookup button{flex-shrink:0;background:linear-gradient(135deg,#f0d98c,#d4af37 45%,#a8842a);color:#241a05;border:none;border-radius:9px;
+  font-family:var(--sans);font-weight:700;font-size:13px;letter-spacing:.05em;padding:0 18px;cursor:pointer;transition:filter .15s}
+.lookup button:hover{filter:brightness(1.08)}
+.lookup button:disabled{opacity:.55;cursor:default}
+.lookup-err{font-size:12px;color:#e08a7a;margin-top:8px;min-height:16px;text-align:center}
+/* ---------- seal ---------- */
+.seal{display:flex;flex-direction:column;align-items:center;gap:4px;margin-top:22px}
+.seal-svg{width:64px;height:64px;color:var(--gold);opacity:.9}
+.seal-line{font-size:10px;letter-spacing:.18em;color:var(--muted);text-align:center;line-height:1.7}
+.seal-line b{color:var(--gold2);font-weight:600}
+/* ---------- loading ---------- */
+.loading{display:flex;flex-direction:column;align-items:center;gap:16px;padding:34px 0 26px}
+.spinner{width:34px;height:34px;border-radius:50%;border:2px solid rgba(216,170,82,.18);border-top-color:var(--gold);animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading p{font-size:13px;letter-spacing:.14em;color:var(--muted);text-transform:uppercase}
+/* ---------- empty state ---------- */
+.empty-ic{display:flex;justify-content:center;margin-bottom:14px}
+.empty-ic svg{width:40px;height:40px;color:var(--gold);opacity:.85}
+/* ---------- footer ---------- */
+.foot{margin-top:22px;text-align:center;font-size:11px;color:#6d675c;letter-spacing:.06em;line-height:1.8}
+.foot .f-crown{display:inline-block;width:15px;height:15px;vertical-align:-3px;color:#8a7a3f;margin-right:5px}
+@media (max-width:420px){
+  .card{padding:24px 18px}
+  h1.verdict{font-size:25px}
+  .row{flex-direction:column;gap:3px;align-items:flex-start}
+  .row .v{text-align:left}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand">
+    <svg class="brand-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 18h20M4 17l-1-9 6 4 3-6 3 6 6-4-1 9H4z"/></svg>
+    <div class="brand-name">REALITY FX</div>
+    <div class="brand-sub">The Trading Academy</div>
+    <div class="brand-line"></div>
+  </div>
+
+  <div class="card">
+    <span class="card-corner tl"></span><span class="card-corner tr"></span>
+    <span class="card-corner bl"></span><span class="card-corner br"></span>
+    <div id="app"></div>
+  </div>
+
+  <div class="foot">
+    Credential verification is provided by <b style="color:#a8965c;font-weight:600">Reality FX Academy</b>.<br>
+    <svg class="f-crown" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 16.5 L3 7 L9 11 L12 5 L15 11 L21 7 L20 16.5 Z"/><rect x="2" y="16.5" width="20" height="2" rx="1"/></svg>
+    Reality FX · realityfxacademy.com
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var REGISTRY = "api/credentials";
+  var ACTIVITY = "api/credentials/activity";
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+  /* canonical credential form: uppercase, only [A-Z0-9] — "rfx-2026-10482" and "RFX 2026 10482" are the same credential */
+  function canon(s) { return String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+  function pretty(id) {
+    var c = canon(id);
+    return c.length >= 12 ? c.slice(0, 3) + "-" + c.slice(3, 7) + "-" + c.slice(7) : id;
+  }
+  function idFromLocation() {
+    try {
+      var q = new URLSearchParams(location.search).get("id");
+      if (q && canon(q)) return q;
+    } catch (e) {}
+    var h = location.hash.replace(/^#\/?/, "");
+    if (h && canon(h)) return h;
+    var m = location.pathname.match(/\/verify\/([^/]+)\/?$/);
+    if (m && canon(m[1])) return m[1];
+    return "";
+  }
+
+  var cached = null;
+  function fetchRegistry() {
+    if (cached) return Promise.resolve(cached);
+    return fetch(REGISTRY, { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error("registry " + r.status); return r.json(); })
+      .then(function (j) { cached = (j && j.credentials) || []; return cached; });
+  }
+  function logActivity(id, outcome) {
+    try {
+      fetch(ACTIVITY, { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: pretty(id), outcome: outcome }), cache: "no-store" }).catch(function () {});
+    } catch (e) {}
+  }
+  function findCred(id) {
+    var c = canon(id);
+    if (!c) return null;
+    var list = cached || [];
+    for (var i = 0; i < list.length; i++) {
+      if (canon(list[i].credential_id) === c) return list[i];
+    }
+    return null;
+  }
+
+  var SEAL = '<svg class="seal-svg" viewBox="0 0 120 120" aria-hidden="true">' +
+    '<circle cx="60" cy="60" r="56" fill="none" stroke="currentColor" stroke-width="2" opacity=".85"/>' +
+    '<circle cx="60" cy="60" r="49" fill="none" stroke="currentColor" stroke-width=".8" opacity=".6"/>' +
+    '<circle cx="60" cy="60" r="41" fill="none" stroke="currentColor" stroke-width="1.2" opacity=".9"/>' +
+    '<path d="M41 74 L40 52 L53 60 L60 46 L67 60 L80 52 L79 74 Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/>' +
+    '<circle cx="60" cy="63" r="2.4" fill="currentColor"/>' +
+    '<path d="M47 78 Q60 86 73 78" fill="none" stroke="currentColor" stroke-width="1.4" opacity=".8"/>' +
+    '<circle cx="33" cy="68" r="1.6" fill="currentColor" opacity=".7"/><circle cx="87" cy="68" r="1.6" fill="currentColor" opacity=".7"/>' +
+    '<circle cx="60" cy="30" r="1.6" fill="currentColor" opacity=".7"/>' +
+    '</svg>';
+
+  function lookupHTML() {
+    return '<div class="verify-another">' +
+      '<div class="va-label">Verify another credential</div>' +
+      '<div class="lookup">' +
+      '<input id="lookupInput" inputmode="text" autocomplete="off" spellcheck="false" placeholder="RFX-2026-000000">' +
+      '<button id="lookupBtn">Verify</button>' +
+      '</div>' +
+      '<div class="lookup-err" id="lookupErr"></div>' +
+      '</div>';
+  }
+
+  function renderEmpty() {
+    $("app").innerHTML =
+      '<div class="empty-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' +
+      '<h1 class="verdict neutral">Verify a credential</h1>' +
+      '<p class="lede">Every RFX certificate carries a unique Certificate ID. Enter it below — or scan the QR code on the certificate — to confirm it was genuinely issued by Reality FX Academy.</p>' +
+      '<div class="lookup">' +
+      '<input id="lookupInput" inputmode="text" autocomplete="off" spellcheck="false" placeholder="RFX-2026-000000">' +
+      '<button id="lookupBtn">Verify</button>' +
+      '</div>' +
+      '<div class="lookup-err" id="lookupErr"></div>' +
+      '<div class="seal">' + SEAL + '<div class="seal-line">Issued by <b>Reality FX Academy</b><br>Official RFX credential registry</div></div>';
+    wireLookup(true);
+  }
+
+  function renderLoading() {
+    $("app").innerHTML =
+      '<div class="loading"><div class="spinner"></div><p>Consulting the registry…</p></div>';
+  }
+
+  function renderError() {
+    $("app").innerHTML =
+      '<h1 class="verdict neutral">Verification service unavailable</h1>' +
+      '<p class="lede">We could not reach the RFX credential registry right now. Please try again in a moment — or contact <b>Reality FX Academy</b> if this persists.</p>' +
+      '<div style="text-align:center"><button id="retryBtn" style="background:linear-gradient(135deg,#f0d98c,#d4af37 45%,#a8842a);color:#241a05;border:none;border-radius:9px;font-family:Inter,system-ui,sans-serif;font-weight:700;font-size:13px;letter-spacing:.05em;padding:12px 26px;cursor:pointer">Try again</button></div>' +
+      lookupHTML();
+    $("retryBtn").addEventListener("click", function () { location.reload(); });
+    wireLookup(false);
+  }
+
+  function renderValid(rec, id) {
+    var issue = rec.issue_date || "";
+    $("app").innerHTML =
+      '<div class="eyebrow">RFX Credential Verification</div>' +
+      '<h1 class="verdict gold">' + (rec.credential_name || "RFX Certified Trader") + '</h1>' +
+      '<div class="pill valid"><span class="dot"></span>Verified credential</div>' +
+      '<p class="lede">This credential has been successfully verified against the official RFX credential registry.</p>' +
+      '<div class="record">' +
+      '<div class="row"><span class="k">Credential</span><span class="v">' + esc(rec.credential_name || "RFX Certified Trader") + '</span></div>' +
+      '<div class="row"><span class="k">Certificate holder</span><span class="v name">' + esc(rec.student_name || "") + '</span></div>' +
+      '<div class="row"><span class="k">Certificate ID</span><span class="v">' + esc(pretty(id)) + '</span></div>' +
+      (issue ? '<div class="row"><span class="k">Date issued</span><span class="v">' + esc(issue) + '</span></div>' : "") +
+      '<div class="row"><span class="k">Status</span><span class="v" style="color:var(--gold)">VALID</span></div>' +
+      '</div>' +
+      '<div class="seal">' + SEAL + '<div class="seal-line">Issued by <b>Reality FX Academy</b><br>Credential verification is provided by Reality FX Academy</div></div>' +
+      lookupHTML();
+    wireLookup(false);
+  }
+
+  function renderRevoked(rec, id) {
+    $("app").innerHTML =
+      '<div class="eyebrow">RFX Credential Verification</div>' +
+      '<h1 class="verdict revoked">Credential revoked</h1>' +
+      '<div class="pill revoked"><span class="dot"></span>No longer valid</div>' +
+      '<p class="lede">This credential is no longer considered valid by <b>Reality FX Academy</b>. If you are relying on this credential, please contact the Academy directly.</p>' +
+      '<div class="record">' +
+      '<div class="row"><span class="k">Credential</span><span class="v">' + esc(rec.credential_name || "RFX Certified Trader") + '</span></div>' +
+      (rec.student_name ? '<div class="row"><span class="k">Certificate holder</span><span class="v name">' + esc(rec.student_name) + '</span></div>' : "") +
+      '<div class="row"><span class="k">Certificate ID</span><span class="v">' + esc(pretty(id)) + '</span></div>' +
+      '<div class="row"><span class="k">Status</span><span class="v" style="color:#e08a7a">REVOKED</span></div>' +
+      '</div>' +
+      '<div class="seal">' + SEAL + '<div class="seal-line">Issued by <b>Reality FX Academy</b></div></div>' +
+      lookupHTML();
+    wireLookup(false);
+  }
+
+  function renderMissing(id) {
+    $("app").innerHTML =
+      '<div class="eyebrow">RFX Credential Verification</div>' +
+      '<h1 class="verdict neutral">Credential not verified</h1>' +
+      '<div class="pill missing">No record found</div>' +
+      '<p class="lede">The credential number provided could not be verified in the RFX credential registry. Please check the number and try again — or contact <b>Reality FX Academy</b> if you believe this is an error.</p>' +
+      '<div class="record">' +
+      '<div class="row"><span class="k">Certificate ID</span><span class="v">' + esc(pretty(id)) + '</span></div>' +
+      '</div>' +
+      '<div class="seal">' + SEAL + '<div class="seal-line">Credential verification is provided by <b>Reality FX Academy</b></div></div>' +
+      lookupHTML();
+    wireLookup(false);
+  }
+
+  function wireLookup(prefill) {
+    var input = $("lookupInput");
+    var btn = $("lookupBtn");
+    var err = $("lookupErr");
+    if (!input || !btn) return;
+    if (prefill) { input.value = ""; input.focus(); }
+    function go() {
+      var v = canon(input.value);
+      if (!v) { err.textContent = "Enter a Certificate ID, e.g. RFX-2026-000000."; return; }
+      err.textContent = "";
+      btn.disabled = true;
+      resolve(v).catch(function () { btn.disabled = false; });
+    }
+    btn.addEventListener("click", go);
+    input.addEventListener("keydown", function (e) { if (e.key === "Enter") go(); });
+    input.addEventListener("input", function () { err.textContent = ""; });
+  }
+
+  function resolve(id) {
+    renderLoading();
+    return fetchRegistry()
+      .then(function () {
+        var rec = findCred(id);
+        var prettyId = pretty(id);
+        if (!rec) { logActivity(id, "NOT_VERIFIED"); renderMissing(id); return; }
+        var st = String(rec.status || "").toUpperCase();
+        if (st === "REVOKED") { logActivity(id, "REVOKED"); renderRevoked(rec, prettyId); return; }
+        logActivity(id, "VALID"); renderValid(rec, prettyId);
+      })
+      .catch(function () { renderError(); });
+  }
+
+  var initial = idFromLocation();
+  if (initial) {
+    resolve(initial);
+  } else {
+    renderEmpty();
+  }
+})();
+</script>
+</body>
+</html>
