@@ -2170,6 +2170,18 @@ a:hover {
   margin-bottom: 1.5rem;
 }
 
+.department-note {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-muted, #9a9a9a);
+  max-width: 68ch;
+  margin: -0.25rem 0 1.5rem;
+  padding: 0.9rem 1.1rem;
+  border-left: 2px solid var(--accent-gold);
+  background: rgba(201, 162, 39, 0.06);
+  border-radius: 0 10px 10px 0;
+}
+
 .job-head {
   display: flex;
   justify-content: space-between;
