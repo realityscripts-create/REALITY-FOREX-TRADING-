@@ -506,10 +506,66 @@
     else paintMachine(panel);
   }
 
+  /* ---------- trader track ---------- */
+  // The same ladder the Academy's trading roles follow (Apprentice → Junior →
+  // Funded → Senior → Portfolio). The machine moves a student up on PROOF,
+  // derived live from the signed challenge results — never a stored claim:
+  //   Apprentice  — every trader starts here
+  //   Junior      — a completed challenge with a machine score of 50+
+  //   Funded      — a machine-signed PASS on any challenge
+  //   Senior      — machine-signed PASSes on 2+ challenges
+  //   Portfolio   — the Prop-Style institutional pass plus another PASS
+  const TRACK_RUNGS = [
+    { name: "Apprentice", cap: "Simulated capital", note: "Every trader starts here. Enter a challenge and let the machine read how you trade — your rung moves on proof, not promises." },
+    { name: "Junior", cap: "Small allocation · performance share", note: "Complete any challenge with a machine score of 50+ and the machine recognises a funded-ready style." },
+    { name: "Funded", cap: "Funded allocation · higher performance share", note: "Earn a machine-signed PASS on any challenge — that signed result is your funded seat." },
+    { name: "Senior", cap: "Significant allocation · negotiated share", note: "Earn machine-signed PASSes on 2+ challenges — sustained proof, not a single lucky run." },
+    { name: "Portfolio", cap: "Strategic allocation · profit participation", note: "Earn the Prop-Style institutional pass AND another PASS — the highest rung, reserved for proven, disciplined operators." }
+  ];
+  function trackRung() {
+    const res = SIM_CHALLENGES.map(function (c) {
+      const a = accountFor(c.id);
+      return { id: c.id, closed: !!(a && a.closed), score: a && a.assessment ? a.assessment.score : 0, passed: !!(a && a.assessment && a.assessment.passed) };
+    });
+    const scored = res.filter(function (r) { return r.closed && r.score >= 50; }).length;
+    const passes = res.filter(function (r) { return r.passed; });
+    const nPass = passes.length;
+    if (passes.some(function (r) { return r.id === "prop"; }) && nPass >= 2) return 4;
+    if (nPass >= 2) return 3;
+    if (nPass >= 1) return 2;
+    if (scored >= 1) return 1;
+    return 0;
+  }
+  function trackHTML() {
+    const rung = trackRung();
+    const r = TRACK_RUNGS[rung];
+    const icons = ["book", "chart", "shield", "diamond", "institution"];
+    const ladder = TRACK_RUNGS.map(function (rr, i) {
+      const on = i <= rung;
+      const cur = i === rung;
+      const ic = window.OSIcon ? window.OSIcon(icons[i]) : "";
+      return `<div class="st-step ${on ? "on" : ""} ${cur ? "cur" : ""}" title="${esc(rr.cap)}">
+        <div class="st-dot">${ic}</div><b>${esc(rr.name)}</b><span>${esc(rr.cap)}</span>
+      </div>`;
+    }).join(`<div class="st-link"></div>`);
+    return `<div class="sim-track">
+      <div class="sim-track-head">
+        <div>
+          <h3 class="panel-title gold-serif">Your trader track</h3>
+          <p class="panel-sub">The same ladder the Academy's trading roles follow — the machine moves you up on proof, not promises.</p>
+        </div>
+        <span class="sim-track-rung">Rung ${rung + 1} of 5 · <b>${esc(r.name)}</b></span>
+      </div>
+      <div class="sim-track-ladder">${ladder}</div>
+      <p class="sim-track-note">${esc(r.note)}</p>
+    </div>`;
+  }
+
   /* ---------- hub ---------- */
   function paintHub(panel) {
     const myRewards = Object.keys(SIM.rewards || {}).map(function (k) { return SIM.rewards[k]; });
-    panel.innerHTML = `<p class="sim-note">Every challenge is a demo account with machine-enforced rules. Enter free, trade the market, and let the machine measure what the scoreboard hides.</p>
+    panel.innerHTML = `${trackHTML()}
+    <p class="sim-note">Every challenge is a demo account with machine-enforced rules. Enter free, trade the market, and let the machine measure what the scoreboard hides.</p>
       ${myRewards.length ? `<div class="sim-rewards-strip">${myRewards.map(function (r) { return `<span class="sim-reward-chip">👑 ${esc(r.badge)} · R${r.credit} RFX credit</span>`; }).join("")}</div>` : ""}
       <div class="sim-cards">` +
       SIM_CHALLENGES.map(c => {

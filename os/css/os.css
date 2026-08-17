@@ -3161,3 +3161,58 @@ body.soft-light { filter: brightness(0.8) sepia(0.35) saturate(0.85) hue-rotate(
   .eng-miles { grid-template-columns: repeat(2, 1fr); }
   .tier-pick { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   THE TRADER TRACK — the Academy's five-rung ladder, drawn in
+   gold. The machine moves a student up on signed proof; the
+   track is the visible map of where they stand and what the
+   next rung demands. Same design family as the sim cards.
+   ============================================================ */
+.sim-track {
+  background: linear-gradient(160deg, rgba(212, 175, 55, .05), rgba(212, 175, 55, .015));
+  border: 1px solid rgba(212, 175, 55, .22);
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+.sim-track-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
+.sim-track-head .panel-title { margin: 0 0 4px; }
+.sim-track-head .panel-sub { margin: 0; }
+.sim-track-rung {
+  flex: none; font-size: 12px; letter-spacing: .06em; color: var(--text-dim);
+  border: 1px solid rgba(212, 175, 55, .3); background: rgba(212, 175, 55, .08);
+  padding: 6px 12px; border-radius: 20px; white-space: nowrap;
+}
+.sim-track-rung b { color: var(--accent-gold-light); font-family: var(--font-heading); }
+.sim-track-ladder { display: flex; align-items: stretch; gap: 6px; }
+.st-step {
+  flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 6px; padding: 12px 6px;
+  border: 1px solid rgba(255, 255, 255, .08); border-radius: 12px;
+  background: rgba(255, 255, 255, .02); opacity: .45;
+  transition: opacity .25s ease, border-color .25s ease, background .25s ease, box-shadow .25s ease;
+}
+.st-step.on { opacity: 1; }
+.st-step.cur {
+  border-color: rgba(212, 175, 55, .65);
+  background: linear-gradient(160deg, rgba(212, 175, 55, .16), rgba(212, 175, 55, .04));
+  box-shadow: 0 0 0 1px rgba(212, 175, 55, .22), 0 10px 26px rgba(212, 175, 55, .10);
+}
+.st-dot { color: var(--accent-gold-light); display: inline-flex; }
+.st-dot svg { width: 20px; height: 20px; }
+.st-step.on .st-dot svg { filter: drop-shadow(0 0 6px rgba(212, 175, 55, .55)); }
+.st-step b { font-family: var(--font-heading); font-size: 13px; color: #fff; letter-spacing: .04em; }
+.st-step span { font-size: 10.5px; color: var(--text-dim); line-height: 1.4; }
+.st-link {
+  width: 14px; align-self: center; height: 1px; flex: none;
+  background: linear-gradient(90deg, rgba(212, 175, 55, .5), rgba(212, 175, 55, .15));
+}
+.sim-track-note { margin: 12px 0 0; font-size: 12.5px; color: var(--text-dim); line-height: 1.6; }
+.sim-track-note::before { content: "◆ "; color: var(--accent-gold); }
+@media (max-width: 720px) {
+  .sim-track-head { flex-direction: column; }
+  .sim-track-ladder { flex-direction: column; }
+  .st-link { width: 1px; height: 10px; align-self: center; background: linear-gradient(180deg, rgba(212, 175, 55, .5), rgba(212, 175, 55, .15)); }
+  .st-step { flex-direction: row; text-align: left; justify-content: flex-start; gap: 10px; padding: 10px 12px; }
+  .st-step span { flex: 1; }
+}
