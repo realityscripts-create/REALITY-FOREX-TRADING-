@@ -2300,68 +2300,39 @@
      name and the honour itself appears: the accuracy, the completion,
      the streak, and what that performance earned.
      ============================================================ */
+  // The past-year walls stand HONEST. The Academy opens its doors on
+  // 30 September 2026 — no cohort has graduated, no lane has been climbed,
+  // no summit has been taken. The wall is earned, never given, and it does
+  // not write its history before it has lived it. The first names land with
+  // the first cohort, and not a moment before.
   const HOF_YEARS = [
     {
       year: 2024,
-      tag: "The foundation year",
-      note: "The first cohort walked in as beginners and left as traders. The Academy kept the standard honest and the wall earned — every name below finished the entire course on the Standard lane, and the Elite summit stayed unclaimed. It was waiting for someone worthy.",
+      tag: "The year the Academy was being built",
+      note: "No names yet — the Academy had not opened its doors. The wall is earned, never given, and the first names land with the first cohort on 30 September 2026.",
       tiers: [
-        { lane: "standard", label: "Standard", entries: [
-          { name: "Thabo Mokoena", acc: 85, comp: 100, streak: 47, honour: "Graduate of the first cohort", prize: "Founder's commendation" },
-          { name: "Lerato Dlamini", acc: 86, comp: 96, streak: 31, honour: "Perfect discipline year", prize: "Merit award — R1,500" },
-          { name: "Sipho Ngubane", acc: 84, comp: 92, streak: 25, honour: "First cohort distinction", prize: "Founder's commendation" },
-          { name: "Aisha Nkosi", acc: 85, comp: 90, streak: 22, honour: "Steadiest hand, first cohort", prize: "Merch crate" },
-          { name: "Chantelle van Wyk", acc: 82, comp: 88, streak: 19, honour: "Never missed a session", prize: "Merit award — R750" }
-        ] },
-        { lane: "challenging", label: "Challenging", entries: [
-          { name: "Tumelo Radebe", acc: 84, comp: 91, streak: 33, honour: "Pushed into the deep lane", prize: "Merit award — R2,000" },
-          { name: "Naledi Khumalo", acc: 84, comp: 87, streak: 26, honour: "Highest Challenging accuracy, 2024", prize: "Founder's commendation" },
-          { name: "Bongani Dube", acc: 83, comp: 85, streak: 21, honour: "Climbed from Standard", prize: "Merch crate" }
-        ] },
-        { lane: "elite", label: "Elite", entries: [], unclaimed: "The Elite summit stood unclaimed in 2024. The Academy waited — the wall is earned, never given." }
+        { lane: "standard", label: "Standard", entries: [], unclaimed: "The Standard lane stood empty — waiting for the first cohort to earn it." },
+        { lane: "challenging", label: "Challenging", entries: [], unclaimed: "The Challenging lane stood empty — no one had yet been tested in the deep lane." },
+        { lane: "elite", label: "Elite", entries: [], unclaimed: "The Elite summit stood unclaimed. The Academy waited — the wall is earned, never given." }
       ]
     },
     {
       year: 2025,
-      tag: "The year the wall was climbed",
-      note: "The Academy grew, the lanes deepened, and one student did what no one had done before — finished the Elite lane and took the summit. The Challenging names below are the ones who refused to stay comfortable; the Standard names are the foundation that kept the school honest.",
+      tag: "The year the Academy took its final shape",
+      note: "The wall still waits — every lane open, the summit unclaimed. When the doors open on 30 September 2026, the first cohort becomes the first to write its names here.",
       tiers: [
-        { lane: "standard", label: "Standard", entries: [
-          { name: "Nomvula Khumalo", acc: 85, comp: 100, streak: 41, honour: "Graduate, second cohort", prize: "Merit award — R1,500" },
-          { name: "Priya Naidoo", acc: 84, comp: 98, streak: 35, honour: "Perfect discipline year", prize: "Founder's commendation" },
-          { name: "Karabo Molefe", acc: 84, comp: 95, streak: 28, honour: "Second cohort distinction", prize: "Merch crate" },
-          { name: "Zinhle Maseko", acc: 83, comp: 93, streak: 24, honour: "Steadiest hand, second cohort", prize: "Merit award — R750" },
-          { name: "Sibusiso Zulu", acc: 82, comp: 90, streak: 20, honour: "Never missed a session", prize: "Founder's commendation" },
-          { name: "Mpho Sebata", acc: 81, comp: 89, streak: 17, honour: "Most improved, 2025", prize: "Merch crate" }
-        ] },
-        { lane: "challenging", label: "Challenging", entries: [
-          { name: "Daniel van der Merwe", acc: 85, comp: 97, streak: 52, honour: "Challenging graduate, 2025", prize: "Merit award — R2,000" },
-          { name: "Yusuf Patel", acc: 84, comp: 94, streak: 38, honour: "Highest Challenging accuracy, 2025", prize: "Founder's commendation" },
-          { name: "Lerato Mokoena", acc: 83, comp: 91, streak: 30, honour: "Climbed from Standard", prize: "Merch crate" },
-          { name: "Tshepo Modise", acc: 84, comp: 89, streak: 27, honour: "Refused the easy lane", prize: "Merit award — R1,500" }
-        ] },
-        { lane: "elite", label: "Elite", entries: [
-          { name: "Amara Okafor", acc: 56, comp: 58, streak: 160, honour: "FIRST TO THE SUMMIT", prize: "R2,000 · mentorship year · name forever on the wall" }
-        ] }
+        { lane: "standard", label: "Standard", entries: [], unclaimed: "The Standard lane stood empty — waiting for the first cohort to earn it." },
+        { lane: "challenging", label: "Challenging", entries: [], unclaimed: "The Challenging lane stood empty — the deep lane was waiting for someone worthy." },
+        { lane: "elite", label: "Elite", entries: [], unclaimed: "The Elite summit stood unclaimed. The Academy waited — the wall is earned, never given." }
       ]
     }
   ];
-  // The current year's seed — realistic machine-plausible performers that
-  // ordinary humans could genuinely push toward, exactly like the past-year
-  // walls. Used only when the academy roster hasn't answered yet, so the
-  // 2026 wall is alive from day one; real student records replace it the
-  // moment the academy sends them. The Elite summit stays hard to reach.
-  const HOF_CURRENT_SEED = [
-    { name: "Ayanda Nkosi", acc: 85, comp: 74, streak: 18, lane: "standard", honour: "The class of 2026's fastest start", prize: "Merit award — R1,000" },
-    { name: "Rorisang Mokoena", acc: 84, comp: 68, streak: 14, lane: "standard", honour: "Steadiest Standard accuracy, 2026", prize: "Founder's commendation" },
-    { name: "Naledi Zwane", acc: 83, comp: 61, streak: 11, lane: "standard", honour: "Never missed a session", prize: "Merch crate" },
-    { name: "Thabang Molefe", acc: 82, comp: 58, streak: 9, lane: "standard", honour: "Refused the easy lane", prize: "Merit award — R750" },
-    { name: "Zanele Dlamini", acc: 82, comp: 55, streak: 8, lane: "standard", honour: "First cohort of 2026 distinction", prize: "Merch crate" },
-    { name: "Kagiso Radebe", acc: 85, comp: 71, streak: 21, lane: "challenging", honour: "Challenging leader, 2026", prize: "Merit award — R2,000" },
-    { name: "Lerato Ndlovu", acc: 83, comp: 64, streak: 16, lane: "challenging", honour: "Climbed from Standard", prize: "Founder's commendation" },
-    { name: "Mpho Khoza", acc: 83, comp: 60, streak: 12, lane: "challenging", honour: "Pushed into the deep lane", prize: "Merch crate" },
-    { name: "Amahle Mthembu", acc: 58, comp: 60, streak: 40, lane: "elite", honour: "The summit's current leader", prize: "R2,000 · mentorship year · name rising on the wall" }
-  ];
+  // The current year's seed — none. The honesty standard (the leaderboard
+  // lesson): nothing shows as already-won before the doors open. Real student
+  // records populate the wall the moment the academy answers; until then the
+  // current-year wall shows only the student's own live standing — the first
+  // name on a new wall is the rarest invitation in the Academy.
+  const HOF_CURRENT_SEED = [];
 
   // Composite merit index — the machine's ranking for the current year.
   // Accuracy and completion carry the weight; consistency (the streak)
@@ -2385,7 +2356,7 @@
   // earlier seed) is never mistaken for this year's wall — the moment the seed
   // changes, the cache steps aside and the new seed writes. Real academy
   // records still replace it the instant the academy answers.
-  const HOF_SEED_VERSION = "3";
+  const HOF_SEED_VERSION = "4";
   function hofCurrent() {
     const lanes = { standard: [], challenging: [], elite: [] };
     const me = localPerformer();
@@ -2460,7 +2431,7 @@
     root.appendChild(el("div", "page-head hof-head", `
       <p class="eyebrow">Reality FX OS · the honours room</p>
       <h1 class="page-title">The Hall of Fame</h1>
-      <p class="page-sub">The wall of the very best — by year and by lane. Past years are written; the current year is being written, and the machine is watching who earns a place. Hover a name and the honour itself appears.</p>`));
+      <p class="page-sub">The wall of the very best — by year and by lane. It is earned, never given: the past years stand honest and waiting, the current year is being written live, and the machine is watching who earns a place first. Hover a name and the honour itself appears.</p>`));
     root.appendChild(el("div", "hof-ornament", `${ICONS.crown}<span></span><i>Every lesson is a trade. Every trade is a lesson.</i><span></span>${ICONS.crown}`));
     const years = el("div", "hof-years");
     HOF_YEARS.forEach(function (y) {
