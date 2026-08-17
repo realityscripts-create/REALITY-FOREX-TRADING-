@@ -18,6 +18,7 @@
       timeBadges: [], studyDays: [], dayKey: "", daySecs: 0,
       softLight: "off", softAskedAt: "", softDismissed: false, // yellow light mode (evening nudge)
       rev: 0, // multi-tab revision — a stale tab can never clobber a fresher write
+      credRegistered: "", // the credential ID already recorded in the verification registry
       profile: { name: "", email: "", phone: "", country: "", code: "", photo: "" },
       handoff: null };
   }
@@ -1638,6 +1639,10 @@
     // inspection report is not for the classroom.
     const auditNav = document.getElementById("navAudit");
     if (auditNav) auditNav.hidden = !isFounder();
+    // The Registry Console opens only for the founder and registry admins —
+    // students never see the door that mints and revokes credentials.
+    const regNav = document.getElementById("navRegistry");
+    if (regNav) regNav.hidden = !isRegistryAdmin();
     // The identity chip rides every page — verified students never forget
     // their ID, and it travels with them through the whole Academy.
     const chip = document.getElementById("sideIdChip");
@@ -1762,6 +1767,12 @@
       if (!isFounder()) {
         viewEl.innerHTML = `<div class="panel gate-panel"><div class="gate-ic">${ICONS.scale}</div><h3 class="gold-serif">This door is the founder's</h3><p class="page-sub">The Machine Audit is the building's inspection report — the same checks that gate every deploy. Students live the academy; the founder reads the blueprint.</p></div>`;
       } else renderAudit(viewEl);
+    }
+    else if (view === "registry") {
+      // the credential office — minting and revoking is founder/admin only
+      if (!isRegistryAdmin()) {
+        viewEl.innerHTML = `<div class="panel gate-panel"><div class="gate-ic">${ICONS.diamond}</div><h3 class="gold-serif">This door is the registry's</h3><p class="page-sub">The Registry Console mints, revokes and inspects RFX credentials — the authority behind every certificate. It opens only for the founder and registry administrators.</p></div>`;
+      } else renderRegistry(viewEl);
     }
     else if (view === "mentor") {
       if (window.RFXMentor) window.RFXMentor.mount(viewEl);
@@ -1964,6 +1975,14 @@
   function isStaff() {
     const h = S.handoff || {};
     return !!(h.founder || (h.role && ["staff", "mentor", "admin"].indexOf(h.role) >= 0));
+  }
+  /* The Registry Console is the credential office — it mints and revokes the
+     credentials every certificate's QR points at. That authority belongs to
+     the founder and registry administrators only, and the server double-
+     checks the same claim against its own handoff store. */
+  function isRegistryAdmin() {
+    const h = S.handoff || {};
+    return !!(h.founder || h.role === "admin");
   }
   function roomsFetch(path, opts) {
     return fetch("api/rooms" + path, Object.assign({ cache: "no-store" }, opts || {}))
@@ -6226,7 +6245,182 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh}
       </div>
       <button class="btn-gold" id="certPrint">${ICONS.download} Print certificate (PDF)</button>`));
     root.querySelector("#certPrint").addEventListener("click", () => printCertificate());
+    // The certificate is minted into the registry the moment it is earned —
+    // the QR becomes verifiable against the official record, once, forever.
+    root.appendChild(registerCredential(code, dateLong));
     root.appendChild(el("div", "", certValueCards(false)));
+  }
+  /* The certificate, minted into the registry. The moment a student earns
+     it, the OS asks the rail to record it — once per credential, only for
+     verified identities (the server double-checks the studentId against its
+     own handoff store), and never overwriting an existing record, so a
+     copied certificate always resolves to the true holder. If the rail is
+     unreachable the visit stays silent and the next visit retries. The green
+     line is the honest proof: this exact credential is now independently
+     verifiable. */
+  function registerCredential(code, dateLong) {
+    const el0 = el("div", "cert-reg", "");
+    el0.hidden = true;
+    const h = handoffRec();
+    const name = profileName();
+    if (!h || !h.studentId || !name) return el0;
+    const show = (html) => { el0.hidden = false; el0.innerHTML = `<div class="cert-reg-ok">${html}</div>`; };
+    const line = () => `${ICONS.check} <span>Registered in the RFX verification registry — the QR on this certificate is live. Anyone who scans it sees this exact record.</span>`;
+    if (S.credRegistered === code) { show(line()); return el0; }
+    fetch("api/credentials/register", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ student_id: h.studentId, credential_id: code, credential_name: "RFX Certified Trader", student_name: name, issue_date: dateLong }),
+      cache: "no-store"
+    }).then(r => r.ok ? r.json() : null)
+      .then(function (res) {
+        if (!res || !res.ok) return; // rail unreachable — retried on the next visit
+        S.credRegistered = code;
+        save();
+        show(line());
+      })
+      .catch(function () { /* silent — never interrupt the trophy moment */ });
+    return el0;
+  }
+  /* ============================================================
+     REGISTRY CONSOLE — the credential office (founder / admin)
+     Mint, revoke, search and inspect RFX credentials, and read
+     the verification audit trail. This is the authority behind
+     every certificate the Academy issues: the registry is the
+     source of truth the QR on each certificate points at. The
+     route is gated client-side, and every write is re-checked
+     server-side against the handoff store.
+     ============================================================ */
+  function renderRegistry(root) {
+    const sid = (handoffRec() || {}).studentId || "";
+    const state = { creds: [], act: [], q: "" };
+    const fmtWhen = function (ts) {
+      const t = typeof ts === "number" ? ts : (Date.parse(String(ts)) / 1000);
+      if (!t || isNaN(t)) return "—";
+      const d = new Date(t * 1000);
+      return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) + " · " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    };
+    const longDate = function (iso) {
+      if (!iso) return "";
+      const d = new Date(String(iso).indexOf("-") >= 0 && String(iso).length === 10 ? iso + "T00:00:00" : iso);
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+    };
+    const pill = (st) => st === "REVOKED" ? `<span class="pill">REVOKED</span>` : `<span class="pill gold">VALID</span>`;
+    root.innerHTML = `
+      <div class="panel reg-head">
+        <h3 class="gold-serif">${ICONS.diamond} Registry Console</h3>
+        <p class="page-sub">Mint, revoke and inspect RFX credentials — the authority behind every certificate. The registry is the source of truth the QR on each certificate points at, and the audit trail below records every verification scan.</p>
+        <div class="reg-stats" id="regStats"></div>
+      </div>
+      <div class="reg-grid">
+        <div class="panel reg-mint">
+          <h4 class="reg-h">${ICONS.sparkle} Mint a credential</h4>
+          <label class="reg-l">Student name</label>
+          <input class="reg-in" id="mintName" placeholder="Full verified name" autocomplete="off">
+          <div class="reg-id-prev" id="mintIdPrev"></div>
+          <label class="reg-l">Credential</label>
+          <select class="reg-in" id="mintCred">
+            <option>RFX Certified Trader</option>
+            <option>RFX Advanced Trader</option>
+            <option>RFX Risk Management Specialist</option>
+            <option>RFX Trading Instructor</option>
+            <option>RFX Professional Trading Certification</option>
+          </select>
+          <label class="reg-l">Issue date</label>
+          <input class="reg-in" id="mintDate" type="date">
+          <button class="btn-gold reg-mint-btn" id="mintBtn">Mint credential</button>
+          <p class="reg-err" id="mintErr"></p>
+        </div>
+        <div class="panel reg-list">
+          <h4 class="reg-h">${ICONS.chart} The registry</h4>
+          <input class="reg-in reg-search" id="regSearch" placeholder="Search by ID or holder…" autocomplete="off">
+          <div id="regTable"></div>
+        </div>
+      </div>
+      <div class="panel reg-audit">
+        <h4 class="reg-h">${ICONS.clock} Verification audit trail</h4>
+        <div id="regAudit"></div>
+      </div>`;
+    const $r = (id) => root.querySelector("#" + id);
+    const mintName = $r("mintName"), mintCred = $r("mintCred"), mintDate = $r("mintDate"), mintBtn = $r("mintBtn"), mintErr = $r("mintErr"), mintPrev = $r("mintIdPrev");
+    const todayISO = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); };
+    mintDate.value = todayISO();
+    const updPrev = function () {
+      const n = mintName.value.trim();
+      mintPrev.innerHTML = n ? `<span class="reg-prev-lbl">Credential ID</span> <b>${esc(certCode(n))}</b>` : "";
+    };
+    mintName.addEventListener("input", updPrev);
+    updPrev();
+    function renderStats() {
+      const valid = state.creds.filter(c => c.status !== "REVOKED").length;
+      $r("regStats").innerHTML =
+        `<div class="reg-stat"><b>${state.creds.length}</b><span>Credentials</span></div>` +
+        `<div class="reg-stat"><b>${valid}</b><span>Valid</span></div>` +
+        `<div class="reg-stat"><b>${state.creds.length - valid}</b><span>Revoked</span></div>` +
+        `<div class="reg-stat"><b>${state.act.length}</b><span>Verification lookups</span></div>`;
+    }
+    function renderTable() {
+      const f = state.q.toLowerCase();
+      const rows = state.creds.filter(c => !f || (c.credential_id || "").toLowerCase().indexOf(f) >= 0 || (c.student_name || "").toLowerCase().indexOf(f) >= 0);
+      if (!rows.length) {
+        $r("regTable").innerHTML = `<p class="reg-empty">${state.creds.length ? "No credentials match that search." : "The registry is empty. Credentials appear here the moment a certificate is earned in the OS — or mint one on the left."}</p>`;
+        return;
+      }
+      $r("regTable").innerHTML = `<table class="reg-table"><thead><tr><th>Credential</th><th>Holder</th><th>Issued</th><th>Status</th><th></th></tr></thead><tbody>` +
+        rows.map(c => `<tr><td class="reg-id">${esc(c.credential_id)}</td><td>${esc(c.student_name)}</td><td class="reg-mut">${esc(c.issue_date || "—")}</td><td>${pill(c.status)}</td><td>${c.status === "VALID" ? `<button class="btn-ghost reg-revoke" data-id="${esc(c.credential_id)}">Revoke</button>` : ""}</td></tr>`).join("") +
+        `</tbody></table>`;
+    }
+    function renderAudit() {
+      if (!state.act.length) { $r("regAudit").innerHTML = `<p class="reg-empty">No lookups yet — every scan of a certificate QR lands here as a credential, a verdict and a time. The scanner's identity is never recorded.</p>`; return; }
+      $r("regAudit").innerHTML = `<ul class="reg-audit-list">` + state.act.slice(0, 60).map(a =>
+        `<li><span class="ra-id">${esc(a.id)}</span><span class="ra-out ${String(a.outcome || "").toLowerCase().replace("_", "-")}">${esc(a.outcome)}</span><span class="ra-at">${fmtWhen(a.at)}</span></li>`).join("") + `</ul>`;
+    }
+    function refresh() {
+      $r("regTable").innerHTML = `<p class="reg-empty">Loading the registry…</p>`;
+      Promise.all([
+        fetch("api/credentials", { cache: "no-store" }).then(r => r.ok ? r.json() : null),
+        fetch("api/credentials/activity?admin=" + encodeURIComponent(sid), { cache: "no-store" }).then(r => r.ok ? r.json() : null)
+      ]).then(function (res) {
+        state.creds = (res[0] && res[0].credentials) || [];
+        state.act = (res[1] && res[1].activity) || [];
+        renderStats(); renderTable(); renderAudit();
+      }).catch(function () { $r("regTable").innerHTML = `<p class="reg-empty">Couldn't reach the registry rail — try again.</p>`; });
+    }
+    $r("regSearch").addEventListener("input", function (e) { state.q = e.target.value; renderTable(); });
+    mintBtn.addEventListener("click", function () {
+      const name = mintName.value.trim();
+      if (!name) { mintErr.textContent = "Enter the student's full name."; return; }
+      mintErr.textContent = "";
+      mintBtn.disabled = true; mintBtn.textContent = "Minting…";
+      fetch("api/credentials/mint", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_id: sid, credential_id: certCode(name), credential_name: mintCred.value, student_name: name, issue_date: longDate(mintDate.value) }),
+        cache: "no-store"
+      }).then(r => r.json()).then(function (res) {
+        mintBtn.disabled = false; mintBtn.textContent = "Mint credential";
+        if (!res.ok) { mintErr.textContent = res.reason || "Mint failed."; return; }
+        mintErr.textContent = "";
+        mintName.value = ""; updPrev();
+        toast("Credential " + res.credential_id + " minted" + (res.already ? " (already existed)" : ""), "ok");
+        refresh();
+      }).catch(function () { mintBtn.disabled = false; mintBtn.textContent = "Mint credential"; mintErr.textContent = "Rail unreachable — try again."; });
+    });
+    $r("regTable").addEventListener("click", function (e) {
+      const btn = e.target.closest(".reg-revoke");
+      if (!btn) return;
+      const id = btn.getAttribute("data-id");
+      if (!window.confirm("Revoke " + id + "? Every scan of that certificate will read REVOKED from now on.")) return;
+      fetch("api/credentials/revoke", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ admin_id: sid, credential_id: id, reason: "Revoked via the Registry Console" }),
+        cache: "no-store"
+      }).then(r => r.json()).then(function (res) {
+        if (!res.ok) { toast(res.reason || "Revoke failed.", ""); return; }
+        toast(id + (res.already ? " was already revoked" : " revoked"), "ok");
+        refresh();
+      }).catch(function () { toast("Rail unreachable — try again.", ""); });
+    });
+    refresh();
   }
   /* The trophy, on paper — a self-contained A4-landscape certificate page
      built from the student's live record (same markup + styles as the

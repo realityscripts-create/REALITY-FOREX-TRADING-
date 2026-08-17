@@ -3181,3 +3181,47 @@ body.soft-light { filter: brightness(0.8) sepia(0.35) saturate(0.85) hue-rotate(
   .st-step { flex-direction: row; text-align: left; justify-content: flex-start; gap: 10px; padding: 10px 12px; }
   .st-step span { flex: 1; }
 }
+
+/* ============================================================
+   REGISTRY CONSOLE — the credential office (founder / admin)
+   Mint, revoke, search and inspect RFX credentials + the
+   verification audit trail. Same gold & dark luxury language.
+   ============================================================ */
+.reg-head { margin-bottom: 14px; }
+.reg-head .gold-serif { display: flex; align-items: center; gap: 9px; }
+.reg-head .gold-serif svg { width: 18px; height: 18px; }
+.reg-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-top: 14px; }
+.reg-stat { background: rgba(212, 175, 55, .05); border: 1px solid rgba(212, 175, 55, .18); border-radius: 12px; padding: 12px 14px; text-align: center; }
+.reg-stat b { display: block; font-family: var(--font-heading); font-size: 22px; color: var(--accent-gold-light); line-height: 1.2; }
+.reg-stat span { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-muted); }
+.reg-grid { display: grid; grid-template-columns: 320px 1fr; gap: 14px; align-items: start; }
+.reg-h { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-gold-light); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.reg-h svg { width: 15px; height: 15px; }
+.reg-l { display: block; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--text-muted); margin: 12px 0 5px; }
+.reg-in { width: 100%; background: #0b0b0b; border: 1px solid rgba(212, 175, 55, .28); border-radius: 9px; color: var(--text-body); font-family: var(--font-body); font-size: 13px; padding: 10px 12px; outline: none; }
+.reg-in:focus { border-color: rgba(212, 175, 55, .65); }
+.reg-id-prev { margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+.reg-id-prev b { font-family: ui-monospace, Consolas, monospace; color: var(--accent-gold-light); margin-left: 6px; letter-spacing: .03em; }
+.reg-mint-btn { width: 100%; margin-top: 14px; }
+.reg-err { font-size: 12px; color: #e08a7a; min-height: 16px; margin-top: 8px; }
+.reg-search { margin-bottom: 12px; }
+.reg-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.reg-table th { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-muted); text-align: left; padding: 8px 10px; border-bottom: 1px solid rgba(212, 175, 55, .2); }
+.reg-table td { padding: 10px; border-bottom: 1px solid rgba(212, 175, 55, .08); vertical-align: middle; }
+.reg-table .reg-id { font-family: ui-monospace, Consolas, monospace; color: var(--accent-gold-light); font-weight: 600; letter-spacing: .02em; }
+.reg-table .reg-mut { color: var(--text-muted); }
+.reg-revoke { font-size: 12px; padding: 6px 12px; }
+.reg-empty { color: var(--text-muted); font-size: 13px; padding: 14px 2px; line-height: 1.6; }
+.reg-audit { margin-top: 14px; }
+.reg-audit-list { list-style: none; padding: 0; margin: 0; }
+.reg-audit-list li { display: flex; align-items: center; gap: 12px; padding: 9px 4px; border-bottom: 1px solid rgba(212, 175, 55, .08); font-size: 13px; }
+.ra-id { font-family: ui-monospace, Consolas, monospace; color: var(--accent-gold-light); font-weight: 600; letter-spacing: .02em; }
+.ra-out { font-size: 10px; letter-spacing: .14em; padding: 3px 9px; border-radius: 999px; border: 1px solid; }
+.ra-out.valid { color: #7ee2a4; border-color: rgba(126, 226, 164, .35); }
+.ra-out.revoked { color: #e08a7a; border-color: rgba(194, 90, 74, .4); }
+.ra-out.not-verified { color: #cfc9bd; border-color: rgba(207, 201, 189, .25); }
+.ra-at { margin-left: auto; color: var(--text-muted); font-size: 12px; }
+.cert-reg { margin-top: 12px; }
+.cert-reg-ok, .cert-reg > div:only-child { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #7ee2a4; background: rgba(126, 226, 164, .06); border: 1px solid rgba(126, 226, 164, .28); border-radius: 999px; padding: 8px 14px; line-height: 1.4; }
+.cert-reg svg { width: 15px; height: 15px; flex: none; }
+@media (max-width: 900px) { .reg-grid { grid-template-columns: 1fr; } }
