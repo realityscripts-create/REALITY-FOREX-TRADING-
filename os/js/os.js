@@ -985,13 +985,13 @@
   // One display source of truth — every surface (interval, tab-return,
   // route re-render) snaps the LIVE SESSION pill to the true value, so a
   // throttled/backgrounded tab can never leave a frozen number on screen.
-  // The pill shows the CURRENT session time (since this tab opened), not
-  // the cumulative total — "live session" means right now, not career.
+  // Shows TOTAL cumulative study time — the student's career hours.
   function refreshSessDisplay() {
     const t = document.getElementById("sessTimer");
     if (!t) return;
-    const currentSession = Math.round((Date.now() - sesStart) / 1000);
-    t.textContent = fmtClock(currentSession);
+    const delta = Math.round((Date.now() - sesStart) / 1000);
+    const total = (S.secs || 0) + delta;
+    t.textContent = fmtClock(total);
   }
   function startSessionClock() {
     if (sesTicker) return;
@@ -3322,7 +3322,7 @@
             ${tourChip()}
             <div class="sess-chip" title="Live session timer — auto-starts when you open the academy, stops when you leave">
               <span class="sess-dot"></span>
-              <div><p class="sess-lbl">Live session</p><p class="sess-time" id="sessTimer">0:00</p><p class="sess-total">Total: ${fmtClock(S.secs || 0)}</p></div>
+              <div><p class="sess-lbl">Live session</p><p class="sess-time" id="sessTimer">0:00</p></div>
             </div>
           </div>
           <div class="ring-side">
@@ -5363,6 +5363,29 @@
       gems.appendChild(el("div", "insight-item " + g.cls, `<span class="ins-ic">${ICONS.sparkle}</span><div><b>${esc(g.title)}</b><p>${esc(g.body)}</p></div>`));
     });
     root.appendChild(gems);
+
+    // Progress report PDF — clean one-page snapshot
+    const pdfBtn = el("button", "btn-gold", ICONS.note + " Download progress report (PDF)");
+    pdfBtn.addEventListener("click", function () {
+      const p = profile();
+      const name = profileName() || "Student";
+      const code = studentID();
+      const lane = tierName();
+      const chDone = CHAPTERS.filter(isComplete).length;
+      const totalSlides = slidesTotalAll();
+      const seen = slidesSeenAll();
+      const avg = courseAverage();
+      const chRows = CHAPTERS.filter(c => c.quiz).map(ch => {
+        const st = chState(ch.id);
+        const done = isComplete(ch.id);
+        return `<tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;font-size:13px;color:#333;">${ch.id}. ${esc(ch.title)}</td><td style="padding:8px 12px;font-size:13px;color:${done ? "#2d7a4f" : "#999"};text-align:center;">${done ? "✓ Complete" : "In progress"}</td><td style="padding:8px 12px;font-size:13px;color:#333;text-align:center;">${st.lastScore != null ? st.lastScore + "%" : "—"}</td><td style="padding:8px 12px;font-size:13px;color:#333;text-align:center;">${st.retries || 0}</td></tr>`;
+      }).join("");
+      const reportHTML = `<!doctype html><html><head><meta charset="utf-8"><title>RFX Progress Report — ${esc(name)}</title><style>@page{size:A4 portrait;margin:20mm 18mm;}body{font-family:Arial,sans-serif;background:#fff;padding:0;margin:0;color:#222;}.head{border-bottom:2px solid #d4af37;padding-bottom:14px;margin-bottom:20px;}.head h1{font-family:Georgia,serif;font-size:22px;color:#080808;margin:0;}.head .sub{font-size:11px;color:#8a8a8a;letter-spacing:2px;margin-top:4px;}.meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;}.meta-card{background:#f9f7f2;border:1px solid #e8e4d8;border-radius:8px;padding:12px 14px;}.meta-card b{display:block;font-size:20px;color:#080808;}.meta-card span{font-size:11px;color:#666;}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}.stat{background:#f9f7f2;border:1px solid #e8e4d8;border-radius:8px;padding:12px;text-align:center;}.stat b{display:block;font-size:18px;color:#d4af37;}.stat span{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{text-align:left;padding:8px 12px;font-size:11px;color:#8a8a8a;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #d4af37;}.footer{border-top:1px dashed #c9b37a;padding-top:12px;margin-top:20px;font-size:10px;color:#8a8a8a;}.footer i{font-style:italic;color:#d4af37;font-size:12px;}</style></head><body><div class="head"><h1>Reality FX — Student Progress Report</h1><div class="sub">REALITY FX TRADING ACADEMY · ${esc(code)}</div></div><div class="meta"><div class="meta-card"><b>${esc(name)}</b><span>Student name</span></div><div class="meta-card"><b>${esc(code)}</b><span>Student ID</span></div><div class="meta-card"><b>${esc(lane)}</b><span>Current lane</span></div></div><div class="stats"><div class="stat"><b>${chDone}/13</b><span>Chapters</span></div><div class="stat"><b>${seen}/${totalSlides}</b><span>Slides</span></div><div class="stat"><b>${avg != null ? avg + "%" : "—"}</b><span>Average</span></div><div class="stat"><b>${S.xp}</b><span>XP</span></div></div><table><thead><tr><th>Chapter</th><th style="text-align:center;">Status</th><th style="text-align:center;">Score</th><th style="text-align:center;">Retakes</th></tr></thead><tbody>${chRows}</tbody></table><div class="footer"><i>Every lesson is a trade. Every trade is a lesson.</i><br>Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · Reality FX · ${esc(code)}</div></body></html>`;
+      const w = window.open("", "_blank");
+      if (w) { w.document.write(reportHTML); w.document.close(); setTimeout(() => { w.print(); }, 500); }
+      toast("Progress report opened — save as PDF from the print dialog", "rank");
+    });
+    root.appendChild(pdfBtn);
   }
 
   function fmtTime(ms) {
@@ -5562,30 +5585,8 @@
       URL.revokeObjectURL(a.href);
       toast("Report exported", "rank");
     });
-    // Progress report PDF — clean one-page snapshot
-    const pdfBtn = el("button", "btn-gold", ICONS.note + " Download progress report (PDF)");
-    pdfBtn.addEventListener("click", function () {
-      const p = profile();
-      const name = profileName() || "Student";
-      const code = studentID();
-      const lane = tierName();
-      const chDone = CHAPTERS.filter(isComplete).length;
-      const totalSlides = slidesTotalAll();
-      const seen = slidesSeenAll();
-      const avg = courseAverage();
-      const chRows = CHAPTERS.filter(c => c.quiz).map(ch => {
-        const st = chState(ch.id);
-        const done = isComplete(ch.id);
-        return `<tr style="border-bottom:1px solid #eee;"><td style="padding:8px 12px;font-size:13px;color:#333;">${ch.id}. ${esc(ch.title)}</td><td style="padding:8px 12px;font-size:13px;color:${done ? "#2d7a4f" : "#999"};text-align:center;">${done ? "✓ Complete" : "In progress"}</td><td style="padding:8px 12px;font-size:13px;color:#333;text-align:center;">${st.lastScore != null ? st.lastScore + "%" : "—"}</td><td style="padding:8px 12px;font-size:13px;color:#333;text-align:center;">${st.retries || 0}</td></tr>`;
-      }).join("");
-      const reportHTML = `<!doctype html><html><head><meta charset="utf-8"><title>RFX Progress Report — ${esc(name)}</title><style>@page{size:A4 portrait;margin:20mm 18mm;}body{font-family:Arial,sans-serif;background:#fff;padding:0;margin:0;color:#222;}.head{border-bottom:2px solid #d4af37;padding-bottom:14px;margin-bottom:20px;}.head h1{font-family:Georgia,serif;font-size:22px;color:#080808;margin:0;}.head .sub{font-size:11px;color:#8a8a8a;letter-spacing:2px;margin-top:4px;}.meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px;}.meta-card{background:#f9f7f2;border:1px solid #e8e4d8;border-radius:8px;padding:12px 14px;}.meta-card b{display:block;font-size:20px;color:#080808;}.meta-card span{font-size:11px;color:#666;}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px;}.stat{background:#f9f7f2;border:1px solid #e8e4d8;border-radius:8px;padding:12px;text-align:center;}.stat b{display:block;font-size:18px;color:#d4af37;}.stat span{font-size:10px;color:#666;text-transform:uppercase;letter-spacing:.5px;}table{width:100%;border-collapse:collapse;margin-bottom:16px;}th{text-align:left;padding:8px 12px;font-size:11px;color:#8a8a8a;text-transform:uppercase;letter-spacing:.5px;border-bottom:2px solid #d4af37;}.footer{border-top:1px dashed #c9b37a;padding-top:12px;margin-top:20px;font-size:10px;color:#8a8a8a;}.footer i{font-style:italic;color:#d4af37;font-size:12px;}</style></head><body><div class="head"><h1>Reality FX — Student Progress Report</h1><div class="sub">REALITY FX TRADING ACADEMY · ${esc(code)}</div></div><div class="meta"><div class="meta-card"><b>${esc(name)}</b><span>Student name</span></div><div class="meta-card"><b>${esc(code)}</b><span>Student ID</span></div><div class="meta-card"><b>${esc(lane)}</b><span>Current lane</span></div></div><div class="stats"><div class="stat"><b>${chDone}/13</b><span>Chapters</span></div><div class="stat"><b>${seen}/${totalSlides}</b><span>Slides</span></div><div class="stat"><b>${avg != null ? avg + "%" : "—"}</b><span>Average</span></div><div class="stat"><b>${S.xp}</b><span>XP</span></div></div><table><thead><tr><th>Chapter</th><th style="text-align:center;">Status</th><th style="text-align:center;">Score</th><th style="text-align:center;">Retakes</th></tr></thead><tbody>${chRows}</tbody></table><div class="footer"><i>Every lesson is a trade. Every trade is a lesson.</i><br>Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · Reality FX · ${esc(code)}</div></body></html>`;
-      const w = window.open("", "_blank");
-      if (w) { w.document.write(reportHTML); w.document.close(); setTimeout(() => { w.print(); }, 500); }
-      toast("Progress report opened — save as PDF from the print dialog", "rank");
-    });
     root.appendChild(el("div", "panel", `<h3 class="panel-title gold-serif">For the moderator</h3><p class="panel-sub">Download the full audit trail — flags, assessment timelines, dwell times and retake history — for review or archiving. On this build the data is device-local; Phase 2 accounts sync every student's record to the academy server.</p>`));
     const modPanel = root.querySelector(".panel:last-of-type");
-    modPanel.appendChild(pdfBtn);
     modPanel.appendChild(exportBtn);
   }
 
@@ -7251,6 +7252,7 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
   }
 
   function renderWorkshops(root) {
+    root.innerHTML = "";
     const done = S.workshops || {};
     root.appendChild(el("div", "page-head", `
       <p class="eyebrow">Reality FX OS · the hands-on wing</p>

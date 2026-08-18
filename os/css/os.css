@@ -207,7 +207,10 @@ body.nav-open { overflow: hidden; }
 .profile-privacy { max-width: 620px; margin-top: 18px; }
 .profile-privacy .page-sub { margin: 8px 0 16px; }
 .profile-privacy-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.profile-privacy-actions .btn-ghost.sm { height: 30px; }
+.profile-privacy-actions .btn-ghost.sm { height: auto; padding: 10px 20px; border-color: rgba(212,175,55,.35); font-size: 13px; }
+.profile-privacy-actions .btn-ghost.sm:hover { border-color: var(--accent-gold); background: rgba(212,175,55,.10); }
+.profile-privacy-actions .btn-ghost.sm.danger { border-color: rgba(240,110,110,.35); color: #f0a69e; }
+.profile-privacy-actions .btn-ghost.sm.danger:hover { border-color: #f0a69e; background: rgba(240,110,110,.10); }
 .profile-privacy #pf-data-status { max-width: 460px; }
 .name-edit-link { display: inline-block; margin-left: 8px; font-size: 11.5px; color: var(--accent-gold-light); text-decoration: none; }
 .name-edit-link:hover { text-decoration: underline; }
@@ -1953,13 +1956,13 @@ input, textarea, [contenteditable="true"], .pause-note { user-select: text; -web
 .audit-inc-head b { font-size: 13.5px; color: var(--text-light); display: block; }
 .audit-inc-head span { font-size: 12px; color: var(--text-muted); }
 .audit-inc-body { display: flex; flex-direction: column; gap: 6px; }
-.audit-inc-row { display: flex; align-items: center; gap: 12px; padding: 9px 12px; background: var(--glass); border: 1px solid var(--glass-border); border-left: 3px solid rgba(240,110,110,.7); border-radius: 10px; font-size: 12px; flex-wrap: wrap; }
-.audit-inc-time { color: var(--text-dim); font-size: 11px; min-width: 128px; font-variant-numeric: tabular-nums; }
-.audit-inc-who { min-width: 170px; }
+.audit-inc-row { display: grid; grid-template-columns: 140px 180px 1fr 260px; align-items: center; gap: 12px; padding: 9px 12px; background: var(--glass); border: 1px solid var(--glass-border); border-left: 3px solid rgba(240,110,110,.7); border-radius: 10px; font-size: 12px; }
+.audit-inc-time { color: var(--text-dim); font-size: 11px; font-variant-numeric: tabular-nums; }
+.audit-inc-who { }
 .audit-inc-who b { color: var(--text-light); }
 .audit-inc-who em { font-style: normal; color: var(--text-dim); }
-.audit-inc-reason { color: #f0a69e; flex: 1; min-width: 140px; }
-.audit-inc-sample { color: var(--text-dim); font-style: italic; max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.audit-inc-reason { color: #f0a69e; }
+.audit-inc-sample { color: var(--text-dim); font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 700px) {
   .audit-row { flex-wrap: wrap; }
   .audit-name { min-width: 0; }
