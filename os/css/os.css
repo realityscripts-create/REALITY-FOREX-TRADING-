@@ -1862,7 +1862,7 @@ input, textarea, [contenteditable="true"], .pause-note { user-select: text; -web
 
 /* The Hall of Fame — earned, never sold */
 .hof-panel { margin-bottom: 46px; }
-.hof-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 16px; }
+.hof-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
 .hof-row {
   display: flex; align-items: center; gap: 12px; padding: 13px 14px;
   border: 1px solid var(--glass-border); border-radius: 12px; background: rgba(0,0,0,.22);
@@ -2610,7 +2610,7 @@ input, textarea, [contenteditable="true"], .pause-note { user-select: text; -web
 .hof-year-head h3 { margin: 0 0 6px; font-size: 21px; }
 .hof-year-head p { margin: 0; font-size: 13px; line-height: 1.65; color: var(--text-muted); max-width: 640px; }
 .hof-tiers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; position: relative; }
-.hof-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.hof-col { display: flex; flex-direction: column; gap: 8px; min-width: 0; } .hof-col .hof-card { flex: 1; }
 .hof-col-head {
   display: flex; align-items: center; gap: 8px; font-size: 10.5px; font-weight: 700;
   letter-spacing: 2px; text-transform: uppercase; color: var(--accent-gold-light);
@@ -3006,7 +3006,7 @@ body.soft-light { filter: brightness(0.8) sepia(0.35) saturate(0.85) hue-rotate(
 .ws-desc { font-size: 12.5px; color: var(--text-muted); line-height: 1.6; margin: 0 0 16px; flex: 1; }
 .ws-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .ws-card-foot span { font-size: 11px; color: var(--text-dim); }
-.ws-back { margin-bottom: 18px; }
+.ws-back { margin-bottom: 18px; position: relative; z-index: 5; }
 .ws-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
 .ws-principle, .ws-task { padding: 20px 22px; }
 .ws-principle p, .ws-task p { font-size: 13px; line-height: 1.7; color: var(--text-muted); margin: 8px 0 0; }
@@ -3194,7 +3194,7 @@ body.soft-light { filter: brightness(0.8) sepia(0.35) saturate(0.85) hue-rotate(
 .reg-stat { background: rgba(212, 175, 55, .05); border: 1px solid rgba(212, 175, 55, .18); border-radius: 12px; padding: 12px 14px; text-align: center; }
 .reg-stat b { display: block; font-family: var(--font-heading); font-size: 22px; color: var(--accent-gold-light); line-height: 1.2; }
 .reg-stat span { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-muted); }
-.reg-grid { display: grid; grid-template-columns: 320px 1fr; gap: 14px; align-items: start; }
+.reg-grid { display: grid; grid-template-columns: 320px 1fr; gap: 14px; align-items: stretch; }
 .reg-h { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-gold-light); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .reg-h svg { width: 15px; height: 15px; }
 .reg-l { display: block; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--text-muted); margin: 12px 0 5px; }
@@ -3214,7 +3214,7 @@ body.soft-light { filter: brightness(0.8) sepia(0.35) saturate(0.85) hue-rotate(
 .reg-empty { color: var(--text-muted); font-size: 13px; padding: 14px 2px; line-height: 1.6; }
 .reg-audit { margin-top: 14px; }
 .reg-audit-list { list-style: none; padding: 0; margin: 0; }
-.reg-audit-list li { display: flex; align-items: center; gap: 12px; padding: 9px 4px; border-bottom: 1px solid rgba(212, 175, 55, .08); font-size: 13px; }
+.reg-audit-list { display: grid; gap: 0; } .reg-audit-list li { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 12px; padding: 9px 4px; border-bottom: 1px solid rgba(212, 175, 55, .08); font-size: 13px; }
 .ra-id { font-family: ui-monospace, Consolas, monospace; color: var(--accent-gold-light); font-weight: 600; letter-spacing: .02em; }
 .ra-out { font-size: 10px; letter-spacing: .14em; padding: 3px 9px; border-radius: 999px; border: 1px solid; }
 .ra-out.valid { color: #7ee2a4; border-color: rgba(126, 226, 164, .35); }
