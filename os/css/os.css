@@ -3198,7 +3198,7 @@ body.soft-light { filter: brightness(0.8) sepia(0.35) saturate(0.85) hue-rotate(
 .reg-stat { background: rgba(212, 175, 55, .05); border: 1px solid rgba(212, 175, 55, .18); border-radius: 12px; padding: 12px 14px; text-align: center; }
 .reg-stat b { display: block; font-family: var(--font-heading); font-size: 22px; color: var(--accent-gold-light); line-height: 1.2; }
 .reg-stat span { font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: var(--text-muted); }
-.reg-grid { display: grid; grid-template-columns: 320px 1fr; gap: 14px; align-items: stretch; }
+.reg-grid { display: grid; grid-template-columns: 380px 1fr; gap: 14px; align-items: start; }
 .reg-h { font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: var(--accent-gold-light); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
 .reg-h svg { width: 15px; height: 15px; }
 .reg-l { display: block; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--text-muted); margin: 12px 0 5px; }

@@ -6469,13 +6469,11 @@ body{display:flex;align-items:center;justify-content:center;min-height:100vh}
     };
     const pill = (st) => st === "REVOKED" ? `<span class="pill">REVOKED</span>` : `<span class="pill gold">VALID</span>`;
     root.innerHTML = `
-      <div class="panel reg-head">
-        <h3 class="gold-serif">${ICONS.diamond} Registry Console</h3>
-        <p class="page-sub">Mint, revoke and inspect RFX credentials — the authority behind every certificate. The registry is the source of truth the QR on each certificate points at, and the audit trail below records every verification scan.</p>
-        <div class="reg-stats" id="regStats"></div>
-      </div>
       <div class="reg-grid">
         <div class="panel reg-mint">
+          <h3 class="gold-serif">${ICONS.diamond} Registry Console</h3>
+          <p class="page-sub">Mint, revoke and inspect RFX credentials — the authority behind every certificate. The registry is the source of truth the QR on each certificate points at.</p>
+          <div class="reg-stats" id="regStats"></div>
           <h4 class="reg-h">${ICONS.sparkle} Mint a credential</h4>
           <label class="reg-l">Student name</label>
           <input class="reg-in" id="mintName" placeholder="Full verified name" autocomplete="off">
