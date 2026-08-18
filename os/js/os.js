@@ -3986,6 +3986,25 @@
 
     root.appendChild(buildScopeCard());
 
+    // Institutional pacing card — explains the 24h cooling period.
+    // Only shown if the student has at least one completed chapter (they've
+    // experienced the cooldown and might wonder why).
+    const completedCount = CHAPTERS.filter(isComplete).length;
+    if (completedCount > 0) {
+      const cdCard = el("div", "cooldown-card");
+      cdCard.innerHTML = `
+        <div class="cd-head"><span class="cd-ic">${ICONS.clock}</span><div><h3 class="gold-serif">Why the cooling period?</h3><p class="cd-sub">One chapter per day — like school terms</p></div></div>
+        <div class="cd-body">
+          <p>No school lets you sit Term 1, 2, 3 and 4 assessments in one afternoon. Reality FX works the same way. After you complete a chapter, the next one opens in 24 hours.</p>
+          <div class="cd-facts">
+            <div class="cd-fact"><b>Spacing effect</b><p>Research shows that learning distributed over time beats massed practice by 20–40% on long-term retention. The cooling period is not a restriction — it is where the material settles.</p></div>
+            <div class="cd-fact"><b>Consolidation</b><p>Your brain consolidates new information during rest. A 24-hour gap lets the chapter's concepts move from short-term to long-term memory — the same reason university lectures are spaced across a week.</p></div>
+            <div class="cd-fact"><b>Institutional standard</b><p>Every credible education institution paces its curriculum. We are no different. The cooling period protects the value of your certificate by ensuring every graduate actually learned the material — not just passed the quiz.</p></div>
+          </div>
+        </div>`;
+      root.appendChild(cdCard);
+    }
+
     const path = el("div", "journey");
     CHAPTERS.forEach(ch => {
       const st = chState(ch.id);
