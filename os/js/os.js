@@ -7250,7 +7250,6 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
   }
 
   function renderWorkshops(root) {
-    root.innerHTML = "";
     const done = S.workshops || {};
     root.appendChild(el("div", "page-head", `
       <p class="eyebrow">Reality FX OS · the hands-on wing</p>
@@ -7329,7 +7328,7 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
         <div class="ws-actions"><button class="btn-gold" id="wsSubmit">${ICONS.check} Submit workshop</button></div>
         <div class="ws-feedback" id="wsFeedback"></div>
       </div>`;
-    root.querySelector(".ws-back").addEventListener("click", () => renderWorkshops(root));
+    root.querySelector(".ws-back").addEventListener("click", () => { location.hash = "#/workshop"; });
     // The 1% drill (Risk workshop only): live risk maths + a verify-the-
     // arithmetic check. The machine shows the money at risk and the verdict
     // on the 1% rule the moment the numbers are set — then the student has
