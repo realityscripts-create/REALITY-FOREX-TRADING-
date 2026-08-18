@@ -6718,44 +6718,140 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
     (run.per || []).forEach(p => chNames[p.ch] = p.title);
     const qSel = (i) => { const a = run.answers[i]; return (a === undefined || a === null) ? -1 : a; };
     const saveRun = function () { S.finalExamRun = run; save(); };
-    const paint = function () {
-      root.innerHTML = `
-        <div class="exam-hud">
-          <div class="exam-hud-l"><span class="exam-hud-ic">${ICONS.note}</span><div><b>Final Examination</b><span>${Math.round(100 * run.answers.filter(a => a !== undefined && a !== null).length / total)}% answered</span></div></div>
-          <div class="exam-hud-dots">${run.paper.map((_, i) => `<i class="${qSel(i) >= 0 ? "done" : ""}"></i>`).join("")}</div>
-          <div class="exam-hud-t"><span class="exam-clock" id="examClock"></span><span>Question ${run.cur + 1} of ${total}</span></div>
-        </div>
-        <div class="exam-q">
-          <p class="eyebrow">Chapter ${run.paper[run.cur].ch} · ${esc(chNames[run.paper[run.cur].ch] || "")}</p>
-          <h3 class="gold-serif">${esc(run.paper[run.cur].q.q)}</h3>
-          <div class="exam-options">${run.paper[run.cur].q.options.map((o, oi) => `<button class="exam-opt${qSel(run.cur) === oi ? " on" : ""}" data-oi="${oi}">${esc(o)}</button>`).join("")}</div>
-          <div class="exam-nav">${run.cur < total - 1
-            ? `<button class="btn-gold" id="examNext" ${qSel(run.cur) < 0 ? "disabled" : ""}>${ICONS.check} Next question</button>`
-            : `<button class="btn-gold" id="examNext" ${qSel(run.cur) < 0 ? "disabled" : ""}>${ICONS.check} Submit the examination</button>`}
-            <span class="exam-hint">${qSel(run.cur) < 0 ? "Choose an answer to continue — forward only, no going back." : run.cur < total - 1 ? "Forward only — your answer is locked once you move on." : "Last question — submitting ends the paper."}</span>
-          </div>
-        </div>`;
-      const t0 = Date.now();
+    const answeredCount = () => run.answers.filter(a => a !== undefined && a !== null).length;
+    const unanswered = () => total - answeredCount();
+    // Timer tick — shared between exam and review screens
+    let examIv = null;
+    const startTimer = function (clockEl, barEl) {
+      if (examIv) clearInterval(examIv);
       const tick = function () {
         const left = Math.max(0, deadline - Date.now());
         const m = Math.floor(left / 60000), s = Math.floor(left / 1000) % 60;
-        const cl = root.querySelector("#examClock");
-        if (cl) { cl.textContent = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0"); cl.classList.toggle("low", left < 300000); }
-        if (left <= 0) { clearInterval(iv); examSubmit(); }
+        if (clockEl) { clockEl.textContent = String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0"); clockEl.classList.toggle("low", left < 300000); }
+        if (barEl) { barEl.style.width = Math.max(0, left / (deadline - Date.now() + left) * 100) + "%"; barEl.classList.toggle("low", left < 300000); }
+        if (left <= 0) { clearInterval(examIv); examIv = null; examSubmit(); }
       };
-      const iv = setInterval(tick, 1000); tick();
-      root.__examIv = iv;
+      examIv = setInterval(tick, 1000); tick();
+      root.__examIv = examIv;
+    };
+    // Build chapter groupings for the navigator
+    const chGroups = [];
+    run.paper.forEach((p, i) => {
+      if (!chGroups.length || chGroups[chGroups.length - 1].ch !== p.ch) chGroups.push({ ch: p.ch, title: chNames[p.ch] || "", start: i, count: 0 });
+      chGroups[chGroups.length - 1].count++;
+    });
+    // Premium paint — the workshop experience
+    const paint = function () {
+      const pctAnswered = Math.round(100 * answeredCount() / total);
+      const cur = run.paper[run.cur];
+      root.innerHTML = `
+        <div class="exam-workshop">
+          <div class="exam-bar-track"><div class="exam-bar-fill" id="examBar"></div></div>
+          <div class="exam-hud">
+            <div class="exam-hud-l"><span class="exam-hud-ic">${ICONS.note}</span><div><b>Final Examination</b><span>${pctAnswered}% answered · ${unanswered()} remaining</span></div></div>
+            <div class="exam-hud-t"><span class="exam-clock" id="examClock"></span><span>Question ${run.cur + 1} of ${total}</span></div>
+          </div>
+          <div class="exam-body">
+            <div class="exam-main">
+              <div class="exam-q">
+                <p class="eyebrow">Chapter ${cur.ch} · ${esc(chNames[cur.ch] || "")}</p>
+                <h3 class="gold-serif">${esc(cur.q.q)}</h3>
+                <div class="exam-options">${cur.q.options.map((o, oi) => `<button class="exam-opt${qSel(run.cur) === oi ? " on" : ""}" data-oi="${oi}"><span class="exam-opt-letter">${"ABCD"[oi]}</span><span class="exam-opt-text">${esc(o)}</span></button>`).join("")}</div>
+                <div class="exam-nav">
+                  ${run.cur < total - 1
+                    ? `<button class="btn-gold" id="examNext" ${qSel(run.cur) < 0 ? "disabled" : ""}>${ICONS.check} Next question</button>`
+                    : `<button class="btn-gold" id="examNext" ${qSel(run.cur) < 0 ? "disabled" : ""}>${ICONS.note} Review & submit</button>`}
+                  <span class="exam-hint">${qSel(run.cur) < 0 ? "Choose an answer to continue — forward only, no going back." : run.cur < total - 1 ? "Your answer is locked once you move on." : "Review your answers before submitting."}</span>
+                </div>
+              </div>
+            </div>
+            <div class="exam-nav-panel">
+              <div class="exam-nav-head"><b>Questions</b><span>${answeredCount()}/${total}</span></div>
+              <div class="exam-nav-grid">${run.paper.map((p, i) => {
+                const isCur = i === run.cur;
+                const isDone = qSel(i) >= 0;
+                const isNewGroup = i > 0 && run.paper[i].ch !== run.paper[i - 1].ch;
+                return `${isNewGroup ? `<div class="exam-nav-divider">Ch ${p.ch}</div>` : ""}<div class="exam-nav-q${isCur ? " current" : ""}${isDone ? " done" : ""}" data-qi="${i}"><span>${i + 1}</span></div>`;
+              }).join("")}</div>
+              <div class="exam-nav-legend">
+                <span class="enl"><i class="enl-dot current"></i> Current</span>
+                <span class="enl"><i class="enl-dot done"></i> Answered</span>
+                <span class="enl"><i class="enl-dot"></i> Unanswered</span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      // Timer
+      startTimer(root.querySelector("#examClock"), root.querySelector("#examBar"));
+      // Option clicks
       root.querySelectorAll(".exam-opt").forEach(b => b.addEventListener("click", function () {
         run.answers[run.cur] = parseInt(this.getAttribute("data-oi"), 10);
-        saveRun();
-        paint();
+        saveRun(); paint();
       }));
+      // Next / Review button
       const nx = root.querySelector("#examNext");
       if (nx) nx.addEventListener("click", function () {
         if (qSel(run.cur) < 0) return;
         if (run.cur < total - 1) { run.cur++; saveRun(); paint(); }
-        else examSubmit();
+        else paintReview();
       });
+      // Navigator clicks — jump to any question (forward-only during exam,
+      // but the navigator lets you see where you are; clicking a future
+      // question is blocked until you reach it)
+      root.querySelectorAll(".exam-nav-q").forEach(btn => btn.addEventListener("click", function () {
+        const qi = parseInt(this.getAttribute("data-qi"), 10);
+        if (qi <= run.cur) { run.cur = qi; saveRun(); paint(); }
+      }));
+    };
+    // Review screen — see every answer before final submission
+    const paintReview = function () {
+      const ans = answeredCount();
+      const pct = Math.round(100 * ans / total);
+      root.innerHTML = `
+        <div class="exam-workshop">
+          <div class="exam-bar-track"><div class="exam-bar-fill" id="examBar"></div></div>
+          <div class="exam-hud">
+            <div class="exam-hud-l"><span class="exam-hud-ic">${ICONS.check}</span><div><b>Review your answers</b><span>${ans}/${total} answered · ${pct}% complete</span></div></div>
+            <div class="exam-hud-t"><span class="exam-clock" id="examClock"></span><span>${unanswered() > 0 ? unanswered() + " unanswered" : "All answered"}</span></div>
+          </div>
+          <div class="exam-review">
+            <div class="exam-review-header">
+              <h3 class="gold-serif">Before you submit</h3>
+              <p>${unanswered() > 0 ? `<b>${unanswered()} question${unanswered() > 1 ? "s" : ""} unanswered</b> — you can go back to answer them, or submit as-is. Unanswered questions count as wrong.` : "All questions answered. Review below, then submit when ready."}</p>
+            </div>
+            <div class="exam-review-grid">
+              ${chGroups.map(g => `
+                <div class="exam-review-ch">
+                  <div class="exam-review-ch-head"><b>Chapter ${g.ch} · ${esc(g.title)}</b><span>${Array.from({length: g.count}, (_, j) => qSel(g.start + j) >= 0).filter(Boolean).length}/${g.count}</span></div>
+                  ${Array.from({length: g.count}, (_, j) => {
+                    const qi = g.start + j;
+                    const q = run.paper[qi];
+                    const sel = qSel(qi);
+                    const isCorrect = sel === q.q.answer;
+                    return `<div class="exam-review-q${sel < 0 ? " unanswered" : ""}">
+                      <div class="exam-review-q-head"><span class="exam-review-num">${qi + 1}</span><span class="exam-review-ch${sel < 0 ? " miss" : isCorrect ? " hit" : " miss"}">${sel < 0 ? "—" : isCorrect ? "✓" : "✗"}</span></div>
+                      <p class="exam-review-q-text">${esc(q.q.q)}</p>
+                      ${sel >= 0 ? `<p class="exam-review-ans ${isCorrect ? "hit" : " miss"}">Your answer: ${q.q.options[sel]}${!isCorrect ? ` · Correct: ${q.q.options[q.q.answer]}` : ""}</p>` : `<p class="exam-review-ans unanswered">No answer given</p>`}
+                    </div>`;
+                  }).join("")}
+                </div>`
+              ).join("")}
+            </div>
+            <div class="exam-review-actions">
+              ${unanswered() > 0 ? `<button class="btn-ghost" id="examBackToQ">← Back to unanswered questions</button>` : ""}
+              <button class="btn-gold" id="examFinalSubmit">${ICONS.trophy} Submit the examination</button>
+            </div>
+          </div>
+        </div>`;
+      startTimer(root.querySelector("#examClock"), root.querySelector("#examBar"));
+      // Back to first unanswered
+      const backBtn = root.querySelector("#examBackToQ");
+      if (backBtn) backBtn.addEventListener("click", function () {
+        const firstUnanswered = run.answers.findIndex((a, i) => (a === undefined || a === null) && i < total);
+        if (firstUnanswered >= 0) { run.cur = firstUnanswered; saveRun(); paint(); }
+      });
+      // Final submit
+      root.querySelector("#examFinalSubmit").addEventListener("click", examSubmit);
     };
     const examSubmit = function () {
       if (root.__examIv) { clearInterval(root.__examIv); root.__examIv = null; }
