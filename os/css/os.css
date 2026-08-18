@@ -1355,6 +1355,7 @@ h2 { font-family: var(--font-heading); font-size: clamp(26px, 3.4vw, 38px); font
 @keyframes sessPulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 .sess-lbl { font-size: 9.5px; letter-spacing: 1.6px; text-transform: uppercase; color: var(--text-dim); }
 .sess-time { font-family: var(--font-body); font-weight: 600; font-size: 17px; color: #FFFFFF; letter-spacing: 1px; font-variant-numeric: tabular-nums; }
+.sess-total { font-size: 10px; color: var(--text-dim); margin-top: 1px; letter-spacing: .5px; }
 
 /* Identity chip — "ID RFX-10483 (Verified!)", shown when System A's handoff
    delivered this student. Compact by design: the number and the verdict only. */

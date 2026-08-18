@@ -985,12 +985,13 @@
   // One display source of truth — every surface (interval, tab-return,
   // route re-render) snaps the LIVE SESSION pill to the true value, so a
   // throttled/backgrounded tab can never leave a frozen number on screen.
+  // The pill shows the CURRENT session time (since this tab opened), not
+  // the cumulative total — "live session" means right now, not career.
   function refreshSessDisplay() {
     const t = document.getElementById("sessTimer");
     if (!t) return;
-    let base = Number(S.secs);
-    if (!isFinite(base) || base < 0) base = 0; // never paint NaN into the pill
-    t.textContent = fmtClock(base + Math.round((Date.now() - sesStart) / 1000));
+    const currentSession = Math.round((Date.now() - sesStart) / 1000);
+    t.textContent = fmtClock(currentSession);
   }
   function startSessionClock() {
     if (sesTicker) return;
@@ -3321,7 +3322,7 @@
             ${tourChip()}
             <div class="sess-chip" title="Live session timer — auto-starts when you open the academy, stops when you leave">
               <span class="sess-dot"></span>
-              <div><p class="sess-lbl">Live session</p><p class="sess-time" id="sessTimer">${fmtClock(S.secs || 0)}</p></div>
+              <div><p class="sess-lbl">Live session</p><p class="sess-time" id="sessTimer">0:00</p><p class="sess-total">Total: ${fmtClock(S.secs || 0)}</p></div>
             </div>
           </div>
           <div class="ring-side">
