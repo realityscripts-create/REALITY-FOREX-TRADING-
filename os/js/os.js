@@ -4043,10 +4043,10 @@
         <div class="j-card ${allChDone ? "" : "j-dim"}">
           <div class="j-top"><span class="j-num">Capstone</span><span class="j-status">${examDone ? "Passed · " + eBest.pct + "%" : allChDone ? "Ready" : "Locked"}</span></div>
           <h3 class="gold-serif">The Final Examination</h3>
-          <p class="j-focus">Every chapter, one paper — ${CHAPTERS.length * 6} questions drawn fresh across all ${CHAPTERS.length} chapters, timed in hours, one-way, machine-graded. The certificate's last door.</p>
+          <p class="j-focus">Every chapter, one paper — ${CHAPTERS.length * examQuestionsPerCh()} questions drawn fresh across all ${CHAPTERS.length} chapters, timed in hours, one-way, machine-graded. The certificate's last door.</p>
           <div class="j-meta">
-            <span>${CHAPTERS.length * 6} questions</span>
-            <span>${Math.floor(EXAM_MINUTES / 60)}h ${EXAM_MINUTES % 60}m</span>
+            <span>${CHAPTERS.length * examQuestionsPerCh()} questions</span>
+            <span>${Math.floor(examMinutes() / 60)}h ${examMinutes() % 60}m</span>
             <span>pass ${EXAM_PASS}%</span>
             ${examDone ? `<span class="j-best">best ${eBest.pct}%</span>` : ""}
           </div>
@@ -4070,19 +4070,21 @@
 
   function renderLesson(root, chId, startSlide, revision) {
     const ch = CHAPTERS.find(c => c.id === chId) || (chId === BONUS_CHAPTER.id ? BONUS_CHAPTER : null);
-    if (!ch) { location.hash = "#/map"; return; }
-    if (!isUnlocked(ch)) { toast("Finish the previous chapter to unlock " + ch.title, "warn"); location.hash = "#/map"; return; }
+    if (!ch) { console.log("[DEBUG] renderLesson: ch not found for id", chId); location.hash = "#/map"; return; }
+    if (!isUnlocked(ch)) { console.log("[DEBUG] renderLesson: locked", ch.title, "bonus:", ch.bonus); toast("Finish the previous chapter to unlock " + ch.title, "warn"); location.hash = "#/map"; return; }
     const lock = retryLocked(ch);
     // Revision mode = read-only browsing during the reflection window (or any time)
     if (!revision) {
       // Fair Play: reflection lockout after a fail — no instant retakes
       if (lock > 0) {
+        console.log("[DEBUG] renderLesson: lock > 0", lock);
         toast("Reflection period — review the chapter, retake unlocks in " + fmtLock(lock), "warn");
         location.hash = "#/map";
         return;
       }
       const st0 = chState(ch.id);
       if (ch.quiz && st0.lastScore != null && st0.lastScore < PASS_PCT && retriesLeft(ch) <= 0) {
+        console.log("[DEBUG] renderLesson: retries exhausted");
         toast("Retake tokens exhausted — reach out to support for a review", "warn");
         location.hash = "#/map";
         return;
@@ -6529,8 +6531,20 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
      run as a live, proctored workshop — same paper, same pass mark,
      the room is the difference.
      ============================================================ */
-  const EXAM_MINUTES = 150; // 2h 30m — an exam that takes hours
   const EXAM_PASS = 70;     // pass mark, in percent
+  // Tier-aware exam sizing: deeper lanes = harder exams.
+  function examQuestionsPerCh() {
+    const k = tierKey();
+    if (k === "elite") return 8;        // 8 × 13 = 104 questions
+    if (k === "challenging") return 7;   // 7 × 13 = 91 questions
+    return 6;                            // 6 × 13 = 78 questions (standard)
+  }
+  function examMinutes() {
+    const k = tierKey();
+    if (k === "elite") return 210;       // 3h 30m — a serious endurance test
+    if (k === "challenging") return 180;  // 3h — depth demands time
+    return 150;                           // 2h 30m — standard
+  }
   function shuf(a) {
     const r = a.slice();
     for (let i = r.length - 1; i > 0; i--) {
@@ -6548,9 +6562,10 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
   }
   function buildExamPaper() {
     const lane = tierKey();
+    const qpc = examQuestionsPerCh();
     const per = CHAPTERS.map(ch => ({
       ch: ch.id, title: ch.title,
-      qs: shuf(examDeck(ch, lane)).slice(0, 6)
+      qs: shuf(examDeck(ch, lane)).slice(0, qpc)
     }));
     const paper = [];
     per.forEach(b => b.qs.forEach(q => paper.push({ ch: b.ch, q: q })));
@@ -6582,19 +6597,23 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
     const paper = buildExamPaper();
     const n = paper.paper.length;
     const past = S.finalExam && S.finalExam.attempts ? S.finalExam.attempts : [];
+    const em = examMinutes();
+    const qpc = examQuestionsPerCh();
+    const laneLabel = tierKey() === "elite" ? "Elite" : tierKey() === "challenging" ? "Challenging" : "Standard";
+    const qpcLabel = qpc === 8 ? "Eight" : qpc === 7 ? "Seven" : "Six";
     root.appendChild(el("div", "page-head", `
       <p class="eyebrow">Reality FX OS · the capstone</p>
       <h1 class="page-title">The Final Examination</h1>
-      <p class="page-sub">Every chapter, one paper. ${n} questions drawn live from all 13 chapters in your lane — timed in hours, one-way, machine-graded. This is the certificate's last door.</p>`));
+      <p class="page-sub">Every chapter, one paper. ${n} questions drawn live from all 13 chapters in your ${laneLabel} lane — timed in hours, one-way, machine-graded. This is the certificate's last door.</p>`));
     root.appendChild(el("div", "exam-intro", `
       <div class="exam-intro-grid">
         <div class="exam-intro-stat"><b>${n}</b><span>Questions</span></div>
-        <div class="exam-intro-stat"><b>${EXAM_MINUTES} min</b><span>${Math.floor(EXAM_MINUTES / 60)}h ${EXAM_MINUTES % 60}m — the clock never pauses</span></div>
+        <div class="exam-intro-stat"><b>${em} min</b><span>${Math.floor(em / 60)}h ${em % 60}m — the clock never pauses</span></div>
         <div class="exam-intro-stat"><b>${EXAM_PASS}%</b><span>Pass mark</span></div>
         <div class="exam-intro-stat"><b>13/13</b><span>Chapters covered</span></div>
       </div>
       <div class="exam-rules">
-        <p><b>How it works.</b> Six questions per chapter, every chapter — a full sweep of the course. Answer forward-only: once you move on, a question is done. ${EXAM_MINUTES} minutes on the clock, and when it reaches zero the paper submits itself. ${past.length ? "You've sat " + past.length + (past.length === 1 ? " paper" : " papers") + " before — the best result stands." : "First sitting — make it count."}</p>
+        <p><b>How it works.</b> ${qpcLabel} questions per chapter, every chapter — a full sweep of the course. Answer forward-only: once you move on, a question is done. ${em} minutes on the clock, and when it reaches zero the paper submits itself. ${past.length ? "You've sat " + past.length + (past.length === 1 ? " paper" : " papers") + " before — the best result stands." : "First sitting — make it count."}</p>
         <p><b>Honesty built in.</b> The paper is drawn fresh every sitting, the clock never pauses for a tab-switch, and the machine grades the answers — no human second-guessing. Pass at ${EXAM_PASS}% and the certificate is yours.</p>
       </div>
       <div class="exam-cta">
@@ -6609,7 +6628,8 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
       </div>`));
     root.querySelector("#examStart").addEventListener("click", function () {
       const paper2 = buildExamPaper();
-      S.finalExamRun = { paper: paper2.paper, per: paper2.per, lane: paper2.lane, answers: [], cur: 0, deadline: new Date(Date.now() + EXAM_MINUTES * 60000).toISOString() };
+      const mins2 = examMinutes();
+      S.finalExamRun = { paper: paper2.paper, per: paper2.per, lane: paper2.lane, minutes: mins2, answers: [], cur: 0, deadline: new Date(Date.now() + mins2 * 60000).toISOString() };
       save();
       examLive(root, S.finalExamRun);
     });
