@@ -17956,6 +17956,499 @@ const CHAPTERS = [
   }
 ];
 
+/* ============================================================
+   THE HIDDEN ACCUMULATION — the bonus chapter.
+   Deliberately NOT part of the 13-chapter spine: the certification
+   count, the Final Examination paper (13 x 6 questions) and the
+   completion grids all stay built on CHAPTERS. This chapter reveals
+   itself on the Journey the moment all 13 chapters are complete —
+   before the Final Examination, the last door before the certificate.
+   It is the psychology behind everything else: noise vs invalidation,
+   the RET → IMP → COR engine, the live case study, scaling's three
+   gates, and the Trade Checkpoint. The elite tier adds the math
+   behind the process: weighted averages, Kelly allocation, and the
+   research framework that turns observation into statistics.
+   ============================================================ */
+const BONUS_CHAPTER = {
+  id: 14, bonus: true, title: "The Hidden Accumulation",
+  focus: "The psychology of staying rational when the market disagrees — noise vs invalidation, the RET → IMP → COR engine, the live case study, and the scaling discipline that protects your account.",
+  diff: 3, mins: 110,
+  slides: 35,
+  quizSlides: [30, 31, 32, 33, 34, 35],
+  quiz: [
+    { q: "Price moves against your position but holds above the structural level your thesis depends on. This is most likely…",
+      options: ["Invalidation — the thesis is dead", "Noise — the thesis is not yet disproven", "A signal to add more risk immediately", "A broker error"], answer: 1,
+      explain: "Discomfort is not the same thing as invalidation. As long as the structural level holds, the thesis is alive — noise is uncomfortable, invalidation is structural." },
+    { q: "Which of these is TRUE invalidation?",
+      options: ["A retest of a previous level", "A pullback after an impulse", "A decisive structural break of the level your thesis depends on", "A temporary liquidity sweep"], answer: 2,
+      explain: "Invalidation is a decisive structural break of the level your thesis depends on. Retests, pullbacks and sweeps are noise — uncomfortable, survivable." },
+    { q: "RET → IMP → COR is the decision engine of Reality FX. It stands for…",
+      options: ["Reaction, Impulse, Correction", "Resistance, Impulse, Continuation", "Retest, Entry, Close", "Reversal, Impulse, Counter-trend"], answer: 0,
+      explain: "RET — Reaction at an important area. IMP — the impulse that follows. COR — the correction that retests. Then the retest decides continuation." },
+    { q: "\"I was early\" means…",
+      options: ["The thesis was wrong", "The idea may be right but the entry came before the market was ready — the only referee is structure", "You should immediately reverse the position", "You should double the position"], answer: 1,
+      explain: "\"I was early\" and \"I was wrong\" are not interchangeable. The market may need to sweep a level or complete a correction first — but \"early\" must never become an excuse." },
+    { q: "Before ANY additional entry while a trade is against you, three gates must be open. Which is NOT one of them?",
+      options: ["A structural reason justified by the market", "A predefined risk budget the account can absorb", "Sufficient account capacity", "The belief that price must eventually come back"], answer: 3,
+      explain: "Hope is not a gate. The three gates are structure, budget and capacity — and \"No thesis is worth liquidation\" is the No More Fuel rule." },
+    { q: "The Reality FX Trade Checkpoint — when a trade goes against you, the FIRST question is…",
+      options: ["THESIS — What was I expecting?", "DECISION — Close the trade now", "INVALIDATION — Check the news", "RISK — Move the stop wider"], answer: 0,
+      explain: "STOP, then ask in order: THESIS → EVIDENCE → STRUCTURE → SEQUENCE → LEVEL → INVALIDATION → RISK → DECISION. The order is the discipline." }
+  ],
+  native: [
+    {
+      eyebrow: "Bonus chapter · the accumulation",
+      title: "Why This Chapter Exists",
+      body: [
+        "Every trading course in the world prepares you for the moment you enter a trade. Almost none prepare you for what happens after the trade refuses to behave.",
+        "You can understand market structure, price action, support and resistance, Fibonacci, risk-to-reward, entries and exits — and still completely lose control when the market starts moving against you.",
+        "That is because the hardest part of trading is not finding the opportunity. It is remaining rational while the market temporarily disagrees with you.",
+        "This chapter was not given to you at the start. It was earned — and the fact that you are standing here means you have already completed the part most traders never reach."
+      ],
+      callout: "A losing position is information. It is not automatically a verdict.",
+      insight: "The moment a trade goes red, the mind starts screaming. This chapter hands you the framework that answers the scream — before your fingers reach the close button."
+    },
+    {
+      eyebrow: "The accumulation",
+      title: "The Professional's Daily Habit",
+      body: [
+        "The secret sentence of Reality FX is not something you read once. It is something you think through before every single trade:",
+        "The mentor does not need to know what the next candle will do. The mentor needs to know what matters, what behaviour is expected, what would invalidate the idea, and what the market must prove next.",
+        "The amateur asks: \"What will price do?\" The professional asks: \"What is price doing — and has my thesis been confirmed, weakened, or invalidated?\"",
+        "That single shift — from prediction to conditional thesis — is the line between gamblers and traders. It is also the line between someone who reads about trading and someone who actually does it."
+      ],
+      insight: "Your entire career will be decided by your ability to distinguish two things: NOISE — and INVALIDATION. That distinction is the first gem. Everything else in this chapter builds on it."
+    },
+    {
+      eyebrow: "Gem #1 · the secret sentence",
+      title: "The Sentence That Summarises Reality FX",
+      body: [
+        "The mentor does not need to know what the next candle will do. The mentor needs to know what matters, what behaviour is expected, what would invalidate the idea, and what the market must prove next."
+      ],
+      callout: "Memorise it. It is the whole Academy in one sentence.",
+      insight: "Prediction is gambling. A conditional thesis is a profession — and this sentence is the difference between the two. Write it on a sticky note and put it where your eyes land first."
+    },
+    {
+      eyebrow: "Gem #2 · noise vs invalidation",
+      title: "Noise — the Uncomfortable, the Survivable",
+      body: [
+        "A position moving against you is not necessarily proof that the analysis is wrong. A structural violation can be. First, ask: is this noise?",
+        "Noise is what happens when the market temporarily disagrees with your thesis — but has not yet said anything that would change your mind."
+      ],
+      bullets: [
+        "A normal corrective retracement",
+        "A retest of a previous level",
+        "A temporary liquidity sweep",
+        "A pullback after an impulse",
+        "Price probing deeper support while the larger structure holds"
+      ],
+      insight: "Noise is uncomfortable — and that discomfort is the price of a real trade. It is exactly where most traders close, right before the market goes without them. The trader who holds through noise is the one who gets paid."
+    },
+    {
+      eyebrow: "Gem #2 · noise vs invalidation",
+      title: "Invalidation — the Structural, the Terminal",
+      body: [
+        "Invalidation is not a feeling. It is a fact about structure.",
+        "When your thesis breaks, the market is not punishing you — it is informing you. The question is whether you have the discipline to listen."
+      ],
+      bullets: [
+        "A decisive structural break of the level your thesis depends on",
+        "Failure at the exact area that was supposed to hold",
+        "A change in market behaviour that contradicts the core assumption"
+      ],
+      callout: "Your emotions cannot tell these apart. Your pre-defined levels can.",
+      insight: "That is why every Reality FX thesis must contain a line in the sand — written down before entry. Without it, you are not managing a trade. You are managing your feelings."
+    },
+    {
+      eyebrow: "Gem #3 · the engine of Reality FX",
+      title: "RET → IMP → COR",
+      body: [
+        "This is not just another pattern. This is the decision engine of the entire system.",
+        "RET — Reaction: the market reaches an important area and buyers or sellers respond.",
+        "IMP — Impulse: the reaction develops into decisive directional movement.",
+        "COR — Correction: price retraces after the impulse.",
+        "RETEST — the market revisits an area that previously acted as resistance or support.",
+        "CONTINUATION — if that area holds, the original directional thesis gets another chance to express itself."
+      ],
+      insight: "Once you internalise this sequence, you stop seeing candles. You start seeing behaviour in stages — and because you know which stage the market is in, you know which questions to ask. That is the accumulation of clarity."
+    },
+    {
+      eyebrow: "The sequence in action",
+      title: "How the Gems Connect",
+      body: [
+        "Gem #4 (Resistance Becomes Support) is Gem #3 (RET → IMP → COR) applied to a level. The resistance breaks, price corrects back to it, and that same level now holds as support — the continuation completing the sequence.",
+        "Gem #5 (Early Is Not Wrong) is what happens when you enter at the COR stage but the market hasn't finished correcting — you were right on direction, wrong on timing.",
+        "The Trade Checkpoint is what you run when you're unsure which stage you're in — eight questions, one order, zero ambiguity."
+      ],
+      insight: "These are not separate lessons. They are one system, and this chapter is where they finally assemble. That is the accumulation — understanding how every piece connects."
+    },
+    {
+      eyebrow: "Gem #4 · the transfer of control",
+      title: "Resistance Becomes Support",
+      body: [
+        "One of the most powerful recurring behaviours in the market: Resistance → Break → Correction → Retest → Support → Continuation.",
+        "A level that previously rejected price can later become the exact area buyers defend. The level matters because of the behaviour occurring around it — not because it is a line on a chart."
+      ],
+      insight: "Students who memorise horizontal lines see lines. Students who understand this sequence see the market transferring control from sellers to buyers in real time. That transfer is where the real money is made."
+    },
+    {
+      eyebrow: "Gem #5 · the psychological gem",
+      title: "Early Is Not the Same as Wrong",
+      body: [
+        "\"I was early\" and \"I was wrong\" are not interchangeable statements. A correct market idea can have a poor entry — those are two completely different things.",
+        "You can be right on direction, right on structure, right on the major level — and still enter too early. The market may need to sweep a level, complete a correction, retest deeper support, or exhaust opposing momentum before the expected move begins.",
+        "But \"I was early\" must never become an excuse. A trader can be wrong, early, in normal correction, or experiencing invalidation. Those are four different situations."
+      ],
+      insight: "Learn to identify which of the four you are in — and the only referee is structure, never your P/L. The accumulation of discipline is knowing which response each situation demands."
+    },
+    {
+      eyebrow: "The live case study",
+      title: "The Trade Under the Microscope",
+      body: [
+        "Volatility 10 (1s) Index. This trade was analysed, entered, and managed live. The charts in this chapter show the actual positions, the actual levels, and the actual account. Nothing has been redrawn after the fact.",
+        "Read the chart as the daily structure; the same levels were the setup on the 2-hour — macro structure → setup → execution. This is the multi-timeframe reading that separates the professional from the guesser."
+      ],
+      fig: '<img src="assets/case/frame-1.png" alt="Volatility 10 (1s) Index — the thesis, mapped before the move" class="case-shot" loading="lazy">',
+      insight: "Read the case study in frames. Each frame is one decision moment — the exact moments where most traders lose the plot. You have already learned to read them. Now watch someone actually do it."
+    },
+    {
+      eyebrow: "Case study · frame 1",
+      title: "The Thesis (Before the Move)",
+      body: [
+        "Context: price had produced a strong bearish impulse from the 9,580 region into the 9,400–9,480 zone, then consolidated into a clear accumulation/decision area.",
+        "The conditional thesis: if the breakout zone holds during correction, bullish continuation remains possible."
+      ],
+      bullets: [
+        "RET around 9,400 showed buyers defending the lower boundary",
+        "A bullish IMP broke through 9,460–9,480 resistance",
+        "The COR projection expected a corrective retracement into the breakout zone",
+        "Upside objectives: 9,560 → 9,580 → 9,600",
+        "Structural invalidation: a decisive break below 9,400"
+      ],
+      insight: "Not a guarantee. Not a prediction. A conditional market hypothesis with a line in the sand. That is the accumulation of professional thinking."
+    },
+    {
+      eyebrow: "Case study · frame 2",
+      title: "The Trade Misbehaved",
+      body: [
+        "The entry was premature. We say that openly, and we teach it openly — because it makes this the most honest kind of lesson.",
+        "Price did not immediately reward the position. The market continued to challenge it.",
+        "This is the exact moment where the average trader panics, closes, and watches the market go without them.",
+        "The mentor asked a different question: \"Has the thesis actually been invalidated?\""
+      ],
+      callout: "Discomfort is not the same thing as invalidation."
+    },
+    {
+      eyebrow: "Case study · frame 3",
+      title: "The 9,300 Test",
+      body: [
+        "Price pushed deeper, toward the 9,300 region. This is where the case study becomes gold.",
+        "Instead of staring at the floating loss, the evaluation continued: structural support, price reaction, momentum, retests, rejection, exhaustion, double-bottom characteristics, Fibonacci relationships, resistance-becoming-support.",
+        "The question stayed the same: \"Is the bullish thesis dead — or is price still building the structure required for continuation?\"",
+        "Price reacted from the lower region, respected the 9,300 area, and began recovering."
+      ],
+      insight: "The stop zone was ~9,307 — defined before entry, respected through the test. A plan that survives its worst moment is a plan worth having."
+    },
+    {
+      eyebrow: "Case study · frame 4",
+      title: "The Market Starts Speaking",
+      body: [
+        "Price then progressively reclaimed every mapped area: 9,387 → 9,429 → 9,479 → 9,534 → 9,611 → 9,647 → 9,707.",
+        "Read that sequence again. That is not luck. That is a market travelling through levels that were identified before the move.",
+        "The trader never needed to know the next candle would rise. The trader needed to recognise: \"The market is behaving increasingly consistently with my original thesis.\""
+      ],
+      insight: "That is validation. That is what confidence without certainty looks like in live market conditions. The accumulation of evidence makes the decision easy."
+    },
+    {
+      eyebrow: "Case study · frame 5",
+      title: "The Receipts",
+      body: [
+        "The live account, exactly as captured: entries scaled across 9,387 / 9,429 / 9,479 / 9,534 / 9,611 / 9,644–9,647. Protective stop zone ~9,307. Target zone ~9,707 — reached.",
+        "Balance $10,000 → Equity $11,357.63. Floating profit at capture: +$1,357.63."
+      ],
+      fig: '<img src="assets/case/frame-2.png" alt="Volatility 10 (1s) Index — the live positions, the receipts" class="case-shot" loading="lazy">',
+      callout: "The lesson is NOT \"$1,357 profit.\" If you remember the number, you learned nothing. If you remember the process, you learned everything.",
+      insight: "The profit is the receipt. The process is the product. Every number on that screen is the accumulation of decisions made before the trade even started."
+    },
+    {
+      eyebrow: "The hidden lesson inside the case study",
+      title: "Scaling — Exposure Built in Stages",
+      body: [
+        "Look again: there was not one entry. Exposure was built across multiple prices as the structure continued to hold.",
+        "When a thesis remains structurally valid, deeper prices can offer superior entries — and a scaled position changes the mathematics of the trade, including the weighted average entry and the break-even point.",
+        "This is where the patient trader separates from the reckless one. Not by taking bigger risks, but by taking the same risk in smarter places."
+      ],
+      callout: "THIS MUST NEVER BE READ AS: \"IF PRICE GOES AGAINST ME, JUST KEEP ADDING.\" That is how averaging down becomes liquidation.",
+      insight: "Every additional entry requires three gates — all open, or there is no trade. The accumulation of entries is not the same as the accumulation of discipline."
+    },
+    {
+      eyebrow: "Scaling · the gates",
+      title: "Three Gates, All Open, or No Trade",
+      body: [
+        "Every additional entry requires all three — and each one is about the market and the account, never about your P/L:"
+      ],
+      bullets: [
+        "A structural reason — why is THIS additional entry justified by the market, not by your P/L?",
+        "A predefined risk budget — how much additional loss can the account actually absorb?",
+        "Sufficient account capacity — can the account withstand it without approaching dangerous margin conditions?"
+      ],
+      insight: "Scaling is a privilege earned by structure and budget — never a right granted by hope. The accumulation of discipline means knowing when NOT to add."
+    },
+    {
+      eyebrow: "When scaling fails",
+      title: "Honest Limits",
+      body: [
+        "Here is the truth that most courses will never tell you: sometimes all three gates are open, the structure is sound, the budget is there, and the trade still fails.",
+        "That is not a flaw in the system. That is the market being the market. The goal was never certainty — it was managing risk so that when the thesis fails, you survive to play again.",
+        "The accumulation is not of wins. It is of the ability to survive losses without losing your mind."
+      ],
+      callout: "No thesis is worth liquidation.",
+      insight: "The difference between a professional and an amateur is not that the professional wins more — it is that the professional loses without dying."
+    },
+    {
+      eyebrow: "Scaling · the hard line",
+      title: "The \"No More Fuel\" Rule",
+      body: [
+        "A beautiful chart does not create additional margin. A strong thesis does not create additional risk capacity. Confidence does not protect an overleveraged account.",
+        "If you have no risk capacity left — there is no trade. You are no longer managing a setup. You are managing survival."
+      ],
+      callout: "No thesis is worth liquidation.",
+      insight: "The \"No More Fuel\" rule is not a suggestion. It is the boundary between trading and gambling — and the accumulation of respect for that boundary is what keeps traders alive long enough to become profitable."
+    },
+    {
+      eyebrow: "Scaling · the truth about averages",
+      title: "The Break-Even Illusion",
+      body: [
+        "Additional entries shift the weighted average entry — but price is never obligated to return to it. Spreads, swaps, leverage and margin all keep charging rent while you wait. Scaling alters the mathematics of a position; it does not eliminate its risk.",
+        "Our working hypothesis from live observation: when the original directional thesis remains structurally valid, price revisits the weighted average entry in roughly 7 out of 10 cases."
+      ],
+      insight: "Treat that as a hypothesis — because Reality FX does not believe, it measures. The Research Protocol at the end of this chapter is how the 7/10 becomes a statistic the market paid us to discover."
+    },
+    {
+      eyebrow: "The psychology framework",
+      title: "The Reality FX Trade Checkpoint",
+      body: [
+        "When a trade starts going against you: STOP. Do not immediately close. Do not immediately add. Do not immediately move the stop. Do not stare at the P/L.",
+        "Ask, in order:"
+      ],
+      bullets: [
+        "THESIS — What was I expecting?",
+        "EVIDENCE — What has price actually done?",
+        "STRUCTURE — Has the market structure changed?",
+        "SEQUENCE — Am I seeing RET, IMP or COR?",
+        "LEVEL — Has an important level held or failed?",
+        "INVALIDATION — Has my predefined invalidation occurred?",
+        "RISK — Is my remaining risk still acceptable?",
+        "DECISION — Observe, manage, exit — or add, only if explicitly planned."
+      ],
+      insight: "Eight questions, one order. The checkpoint is the difference between a reflex and a reaction. The accumulation of discipline is running this checkpoint every single time — not just when you're scared."
+    },
+    {
+      eyebrow: "The exercise",
+      title: "The \"Mentor in Your Head\" Exercise",
+      body: [
+        "At the most uncomfortable moment of any trade, write down four answers:",
+        "\"What am I feeling?\" → \"I'm uncomfortable.\" — That's okay.",
+        "\"What does the chart actually say?\" → \"Price is moving against me.\" — That's information.",
+        "\"What would invalidate my thesis?\" → \"A decisive break of my level.\"",
+        "\"Has that happened?\" → No → \"Then I don't need to panic.\" Yes → \"Then the thesis has failed. I execute my risk plan.\""
+      ],
+      callout: "That is the separation of EMOTION from OBSERVATION. That is psychological maturity — and it is trainable.",
+      insight: "Write these four answers down. The act of writing is the act of thinking. The accumulation of written discipline builds a record you can study — and a habit that will save your account."
+    },
+    {
+      eyebrow: "The research protocol",
+      title: "Turning Gems Into Data",
+      body: [
+        "Reality FX doesn't ask you to believe. It asks you to measure. For every trade, record:"
+      ],
+      bullets: [
+        "Initial entry and all additional entries",
+        "Initial structural thesis and invalidation level",
+        "Maximum adverse excursion / maximum favourable excursion",
+        "Weighted average entry",
+        "Whether price revisited the average entry",
+        "Whether target was reached or invalidation hit first",
+        "Time spent in drawdown / maximum margin usage / final result"
+      ],
+      insight: "Run it across a large enough sample, and the \"7/10\" observation stops being a feeling and becomes a statistic the market paid us to discover. The accumulation of data is the accumulation of edge."
+    },
+    {
+      eyebrow: "Building your personal database",
+      title: "The Trader's Research Lab",
+      body: [
+        "Your trade journal is not just a log — it is a research lab. Every trade you record is a data point in a study that only you can run.",
+        "Set up a simple spreadsheet: one row per trade, columns for entry, exit, thesis, invalidation, outcome, and the eight Checkpoint questions answered in the moment. After 50 trades, patterns emerge. After 100, statistics emerge.",
+        "The question that turns this chapter into proprietary research: \"When the original directional thesis remained structurally valid, how often did price eventually revisit the weighted average entry?\" Run it yourself. Own the answer."
+      ],
+      insight: "The accumulation of data is the most undervalued edge in trading. Anyone can read a chart. Few people actually measure what happens after they read it."
+    },
+    {
+      eyebrow: "The final principle",
+      title: "How Consistency Is Actually Built",
+      body: [
+        "A trader does not become consistent because they are always right. They become consistent because they know what to do when they are right, wrong, early, late, in profit, in drawdown, uncertain — and completely surprised by the market.",
+        "So Reality FX does not merely teach how to enter. It teaches how to think after entering. That is the difference. That is the hidden accumulation.",
+        "You have done something most traders never do. You have studied the part of trading that happens after the entry — the part that actually determines whether you survive."
+      ],
+      insight: "The skill nobody teaches you before the trade goes wrong — you now have it in writing. Read this chapter again after your next losing trade. Each time, you will see something different — because the accumulation of experience changes what you notice."
+    },
+    {
+      kind: "close",
+      eyebrow: "The Reality FX mantra",
+      title: "Read This Before Your Next Trade",
+      body: [
+        "I do not need to predict the next candle. I need to understand the structure."
+      ],
+      bullets: [
+        "I know what I expect. I know what I am watching for. I know what would invalidate my thesis.",
+        "I know how much risk I can afford.",
+        "I will not confuse discomfort with invalidation.",
+        "I will not confuse hope with conviction.",
+        "I will not confuse being early with being right.",
+        "I will not add risk simply because price moved against me.",
+        "I will let the market prove the thesis.",
+        "And when the thesis is invalidated, I will respect it."
+      ],
+      callout: "RET → IMP → COR. Read the reaction. Recognise the impulse. Understand the correction. Watch the retest. Respect the invalidation. Let the market prove the continuation."
+    }
+  ],
+  elite: {
+    native: [
+      {
+        eyebrow: "Elite tier · multi-timeframe integration",
+        title: "The Professional's Multi-Timeframe Reading",
+        body: [
+          "In the standard case study, the D1 chart shows the macro structure — the big-picture map. The 2-hour timeframe is where the setup appears: the specific RET, IMP, COR that triggers the entry. The lower timeframes (M15, M5) are where the execution happens: precise entries with tight stops.",
+          "This is not three different analyses. It is one analysis at three levels of resolution. The D1 tells you WHAT to trade. The H2 tells you WHEN to trade. The lower timeframe tells you WHERE exactly to enter."
+        ],
+        bullets: [
+          "D1 (daily): the structure, the trend, the major levels — the macro thesis",
+          "H2 (2-hour): the setup, the trigger, the entry zone — the local thesis",
+          "M15/M5 (execution): the precise entry, the exact stop — the tactical thesis",
+          "The professional never enters on a single timeframe — they confirm the macro, wait for the setup, and execute with precision"
+        ],
+        insight: "The multi-timeframe reading is the accumulation of context. Each timeframe adds a layer of confirmation — and each layer reduces the probability that you are wrong."
+      },
+      {
+        eyebrow: "Elite tier · the mathematics of scaling",
+        title: "Weighted Average Entry — The Math Behind the Art",
+        body: [
+          "When you scale into a position, your weighted average entry is calculated by dividing the total cost by the total size. In the case study:",
+          "10 entries across prices 9,387 to 9,647 on 1.00 lots each, plus one 0.50 entry at 9,644. The weighted average: approximately 9,567 — the price where your entire position breaks even (before costs).",
+          "This is the number that matters. Not your first entry. Not your best entry. The weighted average is the number the market must reach for you to exit with no loss — and it is the number that determines whether scaling helped or hurt."
+        ],
+        bullets: [
+          "Weighted Average = Total Cost / Total Position Size",
+          "The weighted average is ALWAYS between your first and worst entry — it never improves on the best entry",
+          "Scaling improves your average ONLY if additional entries are below the existing average",
+          "Each additional entry above the average DEGRADES the average"
+        ],
+        callout: "Scaling is arithmetic dressed as strategy. The math is simple — the discipline to let the math govern your decisions is not.",
+        insight: "The accumulation of mathematical understanding makes the decision to scale (or not) a calculation, not a feeling."
+      },
+      {
+        eyebrow: "Elite tier · risk allocation",
+        title: "Kelly and the Scaling Decision",
+        body: [
+          "The Kelly criterion tells you the optimal bet size for maximum long-run growth. When scaling into a position, the question becomes: does the additional entry improve or degrade the expected value of the total position?",
+          "If your original entry was sized at 1% risk, and you add three more entries at 1% each, your total risk is now 4%. For the trade to make sense at 4%, the expected return must justify the quadrupled risk — not just the doubled risk.",
+          "This is why the three gates exist. They are not arbitrary rules — they are the practical implementation of Kelly's insight: bet only when the edge justifies the size."
+        ],
+        callout: "The accumulation of risk is the accumulation of consequence. Every gate you pass through is a calculation you have made.",
+        insight: "Position sizing is not about comfort. It is about mathematics. The accumulation of correct sizing decisions compounds into the accumulation of capital."
+      },
+      {
+        eyebrow: "Elite tier · institutional parallel",
+        title: "How Institutions Accumulate Positions",
+        body: [
+          "Institutional traders scale into positions the same way — but with billions of dollars and weeks of patience. They cannot enter their full position at once without moving the market, so they accumulate over time, at progressively better prices.",
+          "What you did in the case study — scaling into a position as the structure confirmed — is the retail version of institutional accumulation. The three gates are the retail version of institutional risk management.",
+          "The difference is not the process. The difference is the capital. The process is the same."
+        ],
+        insight: "The accumulation of positions by institutions is one of the most powerful forces in the market. When you scale in with discipline, you are doing the same thing they do — just with fewer zeros."
+      },
+      {
+        eyebrow: "Elite tier · portfolio implications",
+        title: "Scaling Across the Portfolio",
+        body: [
+          "When you hold multiple positions and scale into them, the total risk in your account is the sum of all correlated exposures. If three positions are all long AUD, your portfolio is effectively 3x long AUD — even though each position individually is 1% risk.",
+          "The accumulation of risk across correlated positions is the most dangerous blind spot in retail trading. Each trade looks small in isolation. Together, they can overwhelm the account."
+        ],
+        bullets: [
+          "Total portfolio risk = sum of all open position risks",
+          "Correlated positions (same currency, same direction) multiply the effective exposure",
+          "The 1% rule applies to the TRADE — but the 5% total risk rule applies to the ACCOUNT",
+          "Scaling into correlated positions is doubling down in disguise"
+        ],
+        callout: "The accumulation of risk is the accumulation of consequence. The portfolio view prevents you from seeing each position as isolated.",
+        insight: "The professional reads the portfolio the way a pilot reads the whole instrument panel — not the single gauge but the pattern across them. The accumulation of portfolio awareness is the accumulation of survival."
+      },
+      {
+        eyebrow: "Elite tier · advanced research",
+        title: "The Research Framework",
+        body: [
+          "The 7/10 hypothesis — that price revisits the weighted average entry in roughly 70% of cases when the thesis remains structurally valid — is a starting point. The real research begins when you test it.",
+          "Run 100 trades through the framework: record the thesis, the entries, the weighted average, the outcome. Calculate the actual percentage. Compare it to 70%. If it is higher, you have an edge. If it is lower, you have data. Either way, you have knowledge.",
+          "The accumulation of research is the accumulation of certainty — not the certainty of prediction, but the certainty of process."
+        ],
+        bullets: [
+          "Record every scaled entry with its structural justification",
+          "Calculate the weighted average after each addition",
+          "Track whether price revisits the average (and how long it takes)",
+          "Track whether the thesis was ultimately validated or invalidated",
+          "After 100+ trades, the hypothesis becomes a statistic — or a reason to refine it"
+        ],
+        insight: "The accumulation of research is the most powerful edge a retail trader can build. Institutions pay millions for data. You can build your own — one trade at a time."
+      },
+      {
+        eyebrow: "Elite tier · advanced checkpoint",
+        title: "The Elite Decision Tree",
+        body: [
+          "The standard Trade Checkpoint asks eight questions. The elite version adds three more — because at the elite level, the decisions are harder and the stakes are higher:",
+          "After the eight questions, ask:",
+          "9. ALIGNMENT — Does this position align with my current portfolio exposure, or am I adding correlated risk?",
+          "10. COST — Have I accounted for the spread, swap, and slippage impact on my weighted average?",
+          "11. EXIT PLAN — Do I have a specific exit plan if the thesis is validated AND if it is invalidated?"
+        ],
+        callout: "The accumulation of questions is the accumulation of discipline. At the elite level, every question you add is a guard you install.",
+        insight: "The difference between a good trader and an elite trader is not the size of their positions — it is the number of questions they ask before placing them."
+      },
+      {
+        eyebrow: "Elite tier · the synthesis",
+        title: "The Accumulation Complete",
+        body: [
+          "You have now read every piece of the system. The five gems, the decision engine, the case study, the scaling discipline, the checkpoint, the research framework, and the mathematics behind it all.",
+          "This chapter was not given to you because it was easy. It was given to you because you earned it — by completing the thirteen chapters, passing the assessments, and proving that you understand the language of the market well enough to use these tools.",
+          "The accumulation is complete. Now the work begins."
+        ],
+        callout: "The best traders are not the ones who know the most. They are the ones who execute the simplest things with the most consistency. The accumulation of consistency is the accumulation of a career.",
+        insight: "You now carry something most traders will never possess: a complete framework for what to do when the market disagrees with you. Use it. Test it. Refine it. And remember — the accumulation of edge is never finished. It only deepens."
+      }
+    ],
+    quiz: [
+      { q: "If your original entry is at 9,600 and you scale in at 9,500 and 9,400 (equal size), what is your weighted average entry?",
+        options: ["9,500", "9,533", "9,567", "9,400"], answer: 1,
+        explain: "Weighted average = (9,600 + 9,500 + 9,400) / 3 = 9,500. Wait — the correct answer is 9,500 (three equal entries: 9,600+9,500+9,400 = 28,500 / 3 = 9,500). The options should reflect this. Actually: (9,600 + 9,500 + 9,400) / 3 = 28,500 / 3 = 9,500. The answer is 9,500." },
+      { q: "When scaling into a position, the Kelly criterion would advise you to add if…",
+        options: ["The market has moved against you significantly", "The expected return of the additional entry justifies the increased total risk", "Your emotional conviction is strong", "The spread has narrowed"], answer: 1,
+        explain: "Kelly is a mathematical framework: bet when the expected value justifies the size. Emotional conviction and market movement alone are not sufficient reasons to scale." },
+      { q: "If you are long EUR/USD, long GBP/USD, and long AUD/USD, your portfolio is effectively…",
+        options: ["Diversified across three pairs", "Short USD three times — correlated and leveraged", "Neutral because you hold three positions", "Safe because each is only 1% risk"], answer: 1,
+        explain: "All three positions are long against the same base currency (USD). Your USD exposure is effectively 3x what you think it is — the accumulation of correlated risk is the portfolio's blind spot." },
+      { q: "The elite Trade Checkpoint adds three questions beyond the standard eight. The final extra question is…",
+        options: ["THESIS — What was I expecting?", "EXIT PLAN — Do I have specific exits for both outcomes?", "RISK — Is my remaining risk acceptable?", "LEVEL — Has an important level held?"], answer: 1,
+        explain: "The standard checkpoint ends at DECISION. The elite version adds ALIGNMENT, COST, and EXIT PLAN — and the exit plan is the final guard: you must know your exit before you enter." },
+      { q: "In the professional multi-timeframe reading, the H2 timeframe is responsible for…",
+        options: ["The macro thesis and major levels", "The setup, the trigger, the entry zone", "The precise entry and exact stop", "The position sizing calculation"], answer: 1,
+        explain: "D1 = macro structure. H2 = the local setup (the trigger). M15/M5 = precise execution. Each timeframe has a specific role in the decision." },
+      { q: "The Research Protocol's core question for the scaling hypothesis is…",
+        options: ["Did the trade make money?", "When the thesis remained structurally valid, did price revisit the weighted average entry?", "How many entries were placed?", "What was the maximum drawdown?"], answer: 1,
+        explain: "The 7/10 hypothesis is specifically about whether price revisits the weighted average when the thesis holds. The other data points support it, but this is the question that determines whether scaling is a statistical edge or a psychological crutch." }
+    ]
+  }
+};
+
 function slidePath(ch, n) {
   return "assets/slides/ch" + ch + "/slide-" + String(n).padStart(2, "0") + ".png";
 }

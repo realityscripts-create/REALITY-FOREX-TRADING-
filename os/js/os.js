@@ -1047,6 +1047,9 @@
     return st.viewed.length >= deck.slides; // quiz bank pending → slide completion unlocks
   }
   function isUnlocked(ch) {
+    // The Hidden Accumulation is not part of the 13-chapter chain — it reveals
+    // itself the moment the whole journey is complete, before the Final Examination.
+    if (ch.bonus) return CHAPTERS.every(isComplete);
     if (ch.id === 1) return true;
     const prev = CHAPTERS.find(c => c.id === ch.id - 1);
     return prev ? isComplete(prev) : true;
@@ -1492,6 +1495,7 @@
 
   const BADGES = {
     lion:       { name: "Heart of a Lion",    ic: "heart", desc: "Failed a chapter, came back, and passed it. That's persistence — the trader's hidden edge." },
+    gem:        { name: "Accumulator",           ic: "diamond", desc: "Completed The Hidden Accumulation — the psychology of staying rational when the market disagrees. You carry the framework now." },
     distinction:{ name: "Distinction Hunter", ic: "trophy", desc: "Retook a chapter and pushed past 90% when a pass wasn't enough. Excellence is a habit." },
     honours:    { name: "Honours",            ic: "medal", desc: "Scored 80% or higher on a chapter assessment. Consistency compounds — this is how institutions are built." },
     first:      { name: "First Blood",        ic: "sword", desc: "Passed your very first chapter assessment. Every master started here." },
@@ -3997,11 +4001,41 @@
       if (unlocked) node.querySelector(".j-go").addEventListener("click", () => location.hash = lock > 0 ? "#/review/" + ch.id : "#/lesson/" + ch.id);
       path.appendChild(node);
     });
+    // The Hidden Accumulation — the bonus chapter the journey was hiding. It
+    // reveals itself the moment all 13 chapters are complete: a hidden door
+    // placed BEFORE the Final Examination, because this psychology is the last
+    // thing a student should carry into the paper — and into real trades. It is
+    // not part of the 13-chapter spine: never counted in the exam paper, the
+    // certificate line, or the completion grids. A reward for the journey so far.
+    const allChDone = CHAPTERS.every(isComplete);
+    const gemDone = chPassed(BONUS_CHAPTER.id);
+    const gemJustOpened = allChDone && !S.gemSeen;
+    if (allChDone) { S.gemSeen = true; save(); }
+    const gem = el("div", "j-node hidden-reveal" + (gemDone ? " done" : " open") + (gemJustOpened ? " just-unlocked" : ""), `
+        <div class="j-dot">${gemDone ? "✓" : ICONS.diamond}</div>
+        <div class="j-card">
+          <div class="j-top"><span class="j-num">Hidden Chapter · Bonus</span><span class="j-status">${gemDone ? "Complete" : "Discovered"}</span></div>
+          <h3 class="gold-serif">${esc(BONUS_CHAPTER.title)}</h3>
+          <p class="j-focus">${esc(BONUS_CHAPTER.focus)}</p>
+          <div class="j-meta">
+            <span>${BONUS_CHAPTER.native.length} cards</span>
+            <span>${BONUS_CHAPTER.quiz.length} assessment Qs</span>
+            <span class="j-time" title="Reading + assessment time">≈ ${fmtDur(chapterTotalMins(BONUS_CHAPTER))} · +${fmtDur(quizMins(BONUS_CHAPTER))} assessment</span>
+            ${diffChip(BONUS_CHAPTER)}
+            ${gemDone ? `<span class="j-best">best ${chBest(BONUS_CHAPTER.id)}%</span>` : ""}
+          </div>
+          <p class="gem-note">${ICONS.sparkle} You have completed the thirteen chapters. That puts you ahead of every trader who ever opened a chart without studying the psychology behind it. This is the accumulation — the framework for what happens after the entry, when the market tests your discipline.</p>
+          <button class="btn-gold j-go" data-go="${BONUS_CHAPTER.id}">${gemDone ? "Review The Accumulation" : "Enter The Accumulation"}</button>
+        </div>`);
+    if (allChDone) {
+      gem.querySelector(".j-go").addEventListener("click", () => location.hash = "#/lesson/" + BONUS_CHAPTER.id);
+      path.appendChild(gem);
+    }
+
     // The capstone — the Final Examination is the journey's last door, drawn
     // here as the final node: locked until every chapter passes, then it
     // becomes the certificate's last gate. The exam room stays reachable
     // from the nav too — this is simply the journey's honest ending.
-    const allChDone = CHAPTERS.every(isComplete);
     const examDone = examPassed();
     const eBest = examBest();
     const cap = el("div", "j-node capstone" + (examDone ? " done" : "") + (allChDone ? " open" : " locked"), `
@@ -4035,7 +4069,7 @@
     at: { times: [], picks: [], corrects: [], qlens: [] } };
 
   function renderLesson(root, chId, startSlide, revision) {
-    const ch = CHAPTERS.find(c => c.id === chId);
+    const ch = CHAPTERS.find(c => c.id === chId) || (chId === BONUS_CHAPTER.id ? BONUS_CHAPTER : null);
     if (!ch) { location.hash = "#/map"; return; }
     if (!isUnlocked(ch)) { toast("Finish the previous chapter to unlock " + ch.title, "warn"); location.hash = "#/map"; return; }
     const lock = retryLocked(ch);
@@ -4261,7 +4295,7 @@
     const pct = Math.round(n / ch.slides * 100);
     const fill = document.querySelector(".lesson-progress-fill");
     if (fill) fill.style.width = pct + "%";
-    document.querySelector(".lesson-top .j-num").textContent = "Chapter " + fmt(ch.id);
+    document.querySelector(".lesson-top .j-num").textContent = ch.bonus ? "The Accumulation" : "Chapter " + fmt(ch.id);
     const titleEl = document.querySelector(".lesson-title h3");
     if (titleEl) titleEl.textContent = ch.title;
 
@@ -4777,6 +4811,9 @@
       // otherwise leaves quiz slides out of `viewed` for first-time passers)
       st.viewed = Array.from({ length: ch.slides }, (_, i) => i + 1);
       addXp(XP_QUIZ_PASS);
+      // The Hidden Accumulation: the bonus chapter's pass carries its own badge —
+      // the rarest on the journey, because it is the last door before the exam.
+      if (ch.bonus) { awardBadge(ch, "gem"); addXp(60, "accumulation"); }
       if (score === 100) {
         awardBadge(ch, "perfect"); addXp(50, "perfect-quiz");
         // The upgrade door: a flawless pass proves the lane is too easy — offer the next tier.
@@ -4785,7 +4822,7 @@
       if (score >= 80) awardBadge(ch, "honours");
       if (hadPassed && prevBest !== null && prevBest < 90 && score >= 90) awardBadge(ch, "distinction");
       if (wasFailed || st.retries > 0) awardBadge(ch, "lion");
-      if (passedCount === 0) awardBadge(ch, "first"); // first chapter ever passed
+      if (passedCount === 0 && !ch.bonus) awardBadge(ch, "first"); // first chapter ever passed (the bonus chapter can never be anyone's first)
       st.failedAt = null; // reflection window clears on a pass
       // Flag the chapter this pass just opened so the Journey map can play
       // the golden unlock animation for it (consumed once, in renderMap).

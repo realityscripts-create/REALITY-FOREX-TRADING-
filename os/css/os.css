@@ -3225,3 +3225,93 @@ body.soft-light { filter: brightness(0.8) sepia(0.35) saturate(0.85) hue-rotate(
 .cert-reg-ok, .cert-reg > div:only-child { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: #7ee2a4; background: rgba(126, 226, 164, .06); border: 1px solid rgba(126, 226, 164, .28); border-radius: 999px; padding: 8px 14px; line-height: 1.4; }
 .cert-reg svg { width: 15px; height: 15px; flex: none; }
 @media (max-width: 900px) { .reg-grid { grid-template-columns: 1fr; } }
+
+/* ============================================================
+   THE HIDDEN ACCUMULATION — the bonus chapter's journey node.
+   It appears only when all 13 chapters are complete, placed
+   between Chapter 13 and the Final Examination. A subtle
+   breathing glow invites the student in — restrained, elegant,
+   never noisy. The same travelling-gold-line treatment as the
+   website's Operational Excellence border.
+   ============================================================ */
+.j-node.hidden-reveal .j-dot svg { width: 19px; height: 19px; }
+.j-node.hidden-reveal.open .j-card,
+.j-node.hidden-reveal.done .j-card {
+  position: relative;
+  background: linear-gradient(180deg, rgba(212,175,55,.07), var(--bg-card) 60%);
+  border: 1px solid rgba(212,175,55,.4);
+  box-shadow: 0 0 30px rgba(212,175,55,.09), inset 0 0 20px rgba(212,175,55,.03);
+  overflow: hidden;
+}
+.j-node.hidden-reveal.open .j-card::before,
+.j-node.hidden-reveal.done .j-card::before {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 220%; height: 220%;
+  background: conic-gradient(from 0deg, transparent 0%, transparent 36%, rgba(212,175,55,.7) 50%, transparent 64%, transparent 100%);
+  transform: translate(-50%, -50%);
+  animation: scope-border-travel 9s linear infinite;
+  z-index: 0;
+}
+.j-node.hidden-reveal.open .j-card::after,
+.j-node.hidden-reveal.done .j-card::after {
+  content: '';
+  position: absolute; inset: 1px;
+  background: linear-gradient(180deg, rgba(23,20,13,.85), rgba(17,15,9,.95));
+  border-radius: 13px;
+  z-index: 1;
+}
+.j-node.hidden-reveal .j-card > * { position: relative; z-index: 2; }
+.j-node.hidden-reveal.open .j-dot {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold-light);
+  box-shadow: 0 0 16px rgba(201,162,39,.5), 0 0 2px rgba(201,162,39,.8);
+}
+.j-node.hidden-reveal.done .j-card { border-color: rgba(126,226,164,.45); }
+.j-node.hidden-reveal.done .j-card::before {
+  background: conic-gradient(from 0deg, transparent 0%, transparent 36%, rgba(126,226,164,.55) 50%, transparent 64%, transparent 100%);
+}
+/* The reveal moment — the card rises, the glow breathes, then settles. */
+.j-node.hidden-reveal.just-unlocked .j-card { animation: gemRise .8s ease forwards; }
+.j-node.hidden-reveal.just-unlocked .j-dot { animation: gemFlash 1.6s ease forwards; }
+/* The breathing glow — a subtle, continuous invitation that says
+   "come here" in a classy way. Never pulses, never screams —
+   just a slow inhale and exhale of light. */
+.j-node.hidden-reveal.open .j-card { animation: gemBreathe 4s ease-in-out infinite; }
+.j-node.hidden-reveal.done .j-card { animation: none; }
+@keyframes gemRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes gemFlash {
+  0%   { box-shadow: 0 0 0 rgba(201,162,39,0); }
+  35%  { box-shadow: 0 0 30px rgba(212,175,55,.9), 0 0 4px rgba(212,175,55,1); }
+  100% { box-shadow: 0 0 16px rgba(201,162,39,.5), 0 0 2px rgba(201,162,39,.8); }
+}
+@keyframes gemBreathe {
+  0%, 100% { box-shadow: 0 0 16px rgba(201,162,39,.3), 0 0 2px rgba(201,162,39,.5); }
+  50%      { box-shadow: 0 0 32px rgba(212,175,55,.55), 0 0 6px rgba(212,175,55,.7); }
+}
+.gem-note {
+  margin: 0 0 14px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(212,175,55,.18);
+  background: rgba(212,175,55,.05);
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--text-muted);
+  font-style: italic;
+}
+.gem-note svg { width: 13px; height: 13px; color: var(--accent-gold); margin-right: 6px; vertical-align: -2px; }
+/* The case-study charts inside the lesson cards — framed like evidence. */
+.native-fig .case-shot {
+  width: 100%;
+  max-width: 760px;
+  border-radius: 12px;
+  border: 1px solid rgba(212,175,55,.28);
+  box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  display: block;
+  background: #fff;
+}
