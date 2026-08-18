@@ -1046,13 +1046,33 @@
     const st = chState(ch.id);
     return st.viewed.length >= deck.slides; // quiz bank pending → slide completion unlocks
   }
+  // 24-hour progression gate — a student must wait 24h after completing a
+  // chapter before the next one unlocks. This prevents mass-extraction in a
+  // single session (photograph → pass → next → repeat). Combined with the
+  // sequential unlock and higher pass mark, it makes bulk copying impractical
+  // while keeping the normal learning pace comfortable.
+  const CHAPTER_COOLDOWN_MS = 24 * 60 * 60 * 1000; // 24 hours
   function isUnlocked(ch) {
     // The Hidden Accumulation is not part of the 13-chapter chain — it reveals
     // itself the moment the whole journey is complete, before the Final Examination.
     if (ch.bonus) return CHAPTERS.every(isComplete);
     if (ch.id === 1) return true;
     const prev = CHAPTERS.find(c => c.id === ch.id - 1);
-    return prev ? isComplete(prev) : true;
+    if (!prev || !isComplete(prev)) return false;
+    // 24h cooldown: the previous chapter's completedAt must be at least 24h ago
+    const prevSt = S.chapters[prev.id] || {};
+    if (prevSt.completedAt && (Date.now() - prevSt.completedAt) < CHAPTER_COOLDOWN_MS) return false;
+    return true;
+  }
+  function chapterCooldownLeft(ch) {
+    // Returns milliseconds remaining on the 24h cooldown for this chapter, or 0 if unlocked.
+    if (ch.id === 1 || ch.bonus) return 0;
+    const prev = CHAPTERS.find(c => c.id === ch.id - 1);
+    if (!prev || !isComplete(prev)) return 0;
+    const prevSt = S.chapters[prev.id] || {};
+    if (!prevSt.completedAt) return 0;
+    const left = CHAPTER_COOLDOWN_MS - (Date.now() - prevSt.completedAt);
+    return Math.max(0, left);
   }
 
   /* ---------- Ranks / XP ---------- */
@@ -1821,11 +1841,11 @@
   function renderGuide(root) {
     const secs = [
       { ic: ICONS.map, t: "The Journey", b: "Your course is one path, thirteen chapters, three lanes. Open the Journey to see every chapter, its difficulty, its focus and the assessment that gates the next one. Chapters unlock as you pass — and the reflection period after an assessment is your moment to let the material settle before you move on." },
-      { ic: ICONS.book, t: "Lessons & assessments", b: "Every lesson is a sequence of slides — read, absorb, next. At the end sits the assessment: the gate to the next chapter. You are timed on how long you take, and the machine watches for patterns no human produces. Pass and you earn XP, a badge tier and the next chapter; fail and the reflection period opens, then a retake — your notes and the revision read are exactly what the reflection window is for." },
+      { ic: ICONS.book, t: "Lessons & assessments", b: "Every lesson is a sequence of slides — read, absorb, next. At the end sits the assessment: the gate to the next chapter. You need 80% to pass, and after a pass the next chapter unlocks in 24 hours — one chapter per day keeps the learning real. You are timed on how long you take, and the machine watches for patterns no human produces. Pass and you earn XP, a badge tier and the next chapter; fail and the reflection period opens, then a retake — your notes and the revision read are exactly what the reflection window is for." },
       { ic: ICONS.note, t: "Notes & reflection", b: "Every slide lets you capture a note — they save to your account and stay visible during revision mode. After a failed assessment, the reflection period (a fixed window, chapters differ) is your chance to actually study the material before retaking. Use it: the retake is free, the review is the point." },
       { ic: ICONS.flask, t: "The Laboratory", b: "Theory comes alive here. The 3-Loss Circuit Breaker, the drawdown simulator and the other experiments let you feel what a losing streak actually does to a trading account — without risking a cent. Play with the inputs; the numbers are the lesson." },
       { ic: ICONS.robot, t: "The AI Mentor", b: "A trading twin built from the founder's own head: aggressive opinions, dry humour, and logic that meets you where you are. Ask about a loss, a strategy, or just how to handle the fear — it answers like a mentor, not a search bar. It never leaves the semester early." },
-      { ic: ICONS.shield, t: "Fair Play & integrity", b: "The Academy's electrical fence. Assessment timings are checked, tab-switching is watched, and suspicious patterns raise flags — review triggers for a moderator, never machine verdicts. Your Trust Bar reflects your conduct, and a healthy bar keeps every door open. The rules exist so your certificate means something." },
+      { ic: ICONS.shield, t: "Fair Play & integrity", b: "The Academy's electrical fence. Assessment timings are checked, tab-switching is watched, suspicious patterns raise flags, and rapid progression across chapters is detected — review triggers for a moderator, never machine verdicts. Your Trust Bar reflects your conduct, and a healthy bar keeps every door open. One chapter per day, 80% to pass, randomized questions every time — the rules exist so your certificate means something." },
       { ic: ICONS.key, t: "The Academy Vault", b: "Hidden gems — special packs and founder-level material that not every student earns. The vault opens to students who prove themselves; the key is performance, not payment." },
       { ic: ICONS.target, t: "Your standing", b: "The Trust Bar ring on your dashboard mirrors the academy's record of your conduct — 100% on the day your identity is minted, moving only on measured grounds. Click it to see every action that moved it, and the thresholds explained." },
       { ic: ICONS.medal, t: "Badges & the Hall of Fame", b: "Badges are earned, never given: 80%+ assessment scores, distinction streaks, honest consistency. The Hall of Fame honours the very best — places are earned, never sold, and the wall fills as the Academy grows." },
@@ -3622,7 +3642,7 @@
   /* ---------- Academy FAQ + Fair Usage Policy ---------- */
   function academyBlock() {
     const faqs = [
-      { q: "How many retake attempts do I get per chapter?", a: "Three retake tokens per chapter. After a failed attempt, a 2-hour reflection period unlocks before your next try — the time is meant for reviewing the lesson, not for blind repetition. Once your three tokens are used, the chapter locks and you can request a review from academy support." },
+      { q: "How many retake attempts do I get per chapter?", a: "Three retake tokens per chapter. After a failed attempt, a 2-hour reflection period unlocks before your next try — the time is meant for reviewing the lesson, not for blind repetition. Once your three tokens are used, the chapter locks and you can request a review from academy support. You need 80% to pass, and after a pass the next chapter unlocks in 24 hours — one chapter per day keeps the learning real." },
       { q: "Can I take a screenshot of my results and share them?", a: "You may screenshot your own results for personal motivation. Sharing them publicly is fine as long as you don't misrepresent the academy, its claims, or its certificate. Any result you share must include your real student identity." },
       { q: "Can I share my account or login with a friend?", a: "No. Your account is personal and non-transferable. Sharing your login is a violation of the Academy Fair Usage Policy and will result in suspension of your account and email. Repeated violations lead to a permanent ban and IP block." },
       { q: "How does the academy detect cheating?", a: "Our Fair Play system monitors assessment response times, retake patterns, session behaviour and unusual answer patterns — the same kind of signal analysis used by competitive platforms like chess.com. Flags are reviewed by a human moderator before any action is taken." },
@@ -3961,7 +3981,7 @@
     root.appendChild(el("div", "page-head", `
       <p class="eyebrow">The Journey</p>
       <h2>Thirteen chapters. One transformation.</h2>
-      <p class="page-sub">Complete a chapter's slides and pass its assessment to unlock the next. ${progressPct()}% complete.</p>
+      <p class="page-sub">Complete a chapter's slides and pass its assessment (80%+) to unlock the next — one chapter per day, ${progressPct()}% complete.</p>
       <p class="tier-pill" style="color:${TIERS[tierKey()].color};border-color:${TIERS[tierKey()].color}55"><span class="tier-pill-dot" style="background:${TIERS[tierKey()].color}"></span>Your lane: ${S.tier ? tierName() + " · " + tierTag() : "not chosen yet — pick one in your first lesson"}</p>`));
 
     root.appendChild(buildScopeCard());
@@ -3974,9 +3994,11 @@
       const done = isComplete(ch);
       const lock = retryLocked(ch);
       const badges = (st.badges || []).map(b => badgeIc(b)).join(" ");
-      const label = !unlocked ? "Locked" : done ? "Complete" : lock > 0 ? "Reflection" : "In progress";
+      const cdLeft = chapterCooldownLeft(ch);
+      const cdLabel = cdLeft > 0 ? " · " + fmtDur(cdLeft / 60000) + " until unlock" : "";
+      const label = !unlocked ? "Locked" + cdLabel : done ? "Complete" : lock > 0 ? "Reflection" : "In progress";
       const btn = !unlocked
-        ? `<button class="btn-lock" disabled>Complete previous chapter</button>`
+        ? `<button class="btn-lock" disabled>${cdLeft > 0 ? "Unlocks in " + fmtDur(cdLeft / 60000) : "Complete previous chapter"}</button>`
         : lock > 0
           ? `<button class="btn-ghost j-go" data-go="rev">Reflection · read-only review</button>`
           : `<button class="btn-ghost j-go" data-go="${ch.id}">${done ? "Review" : "Begin"}</button>`;
@@ -4103,13 +4125,32 @@
     // parallel tier deck (elite/challenging) simply replaces the deck fields.
     // Un-authored tiers fall back to the core material with a quiet note.
     const rdeck = tierDeck(ch);
+    let activeCh;
     if (rdeck) {
-      session.ch = Object.assign({}, ch, { native: rdeck.native, quiz: rdeck.quiz, quizSlides: rdeck.quizSlides, slides: rdeck.native.length });
+      activeCh = Object.assign({}, ch, { native: rdeck.native, quiz: rdeck.quiz, quizSlides: rdeck.quizSlides, slides: rdeck.native.length });
       session.tierFallback = false;
     } else {
-      session.ch = ch;
+      activeCh = ch;
       session.tierFallback = tierKey() !== "standard";
     }
+    // Quiz randomisation: shuffle both the question order and the answer
+    // choice order for each question. This prevents photograph-to-answer
+    // extraction — even if a student copies every answer, the order changes
+    // on the next sitting. The shuffled quiz lives only in session.ch;
+    // the original data is never mutated.
+    if (activeCh.quiz && !revision) {
+      const shuffledQuiz = shuf(activeCh.quiz).map(q => {
+        if (!q.options || q.options.length < 2) return q;
+        // Build a permutation of the option indices, track where the correct answer lands
+        const indices = q.options.map((_, i) => i);
+        const perm = shuf(indices);
+        const newOptions = perm.map(i => q.options[i]);
+        const newAnswer = perm.indexOf(q.answer);
+        return Object.assign({}, q, { options: newOptions, answer: newAnswer });
+      });
+      activeCh = Object.assign({}, activeCh, { quiz: shuffledQuiz });
+    }
+    session.ch = activeCh;
     const st = chState(ch.id);
     // revision always starts at slide 1 (read the material from the top)
     let idx = startSlide && !revision ? startSlide - 1 : 0;
@@ -4808,10 +4849,26 @@
     session.downgradeTier = null; // repeated sub-pass on a higher tier → gentle step-down offer
     if (passed) {
       st.passed = true;
+      st.completedAt = Date.now(); // 24h cooldown anchor — the next chapter cannot unlock until this + 24h
       // a pass proves the whole chapter — credit every slide so isComplete()
       // flips true and the next chapter unlocks (the layout-migration trim
       // otherwise leaves quiz slides out of `viewed` for first-time passers)
       st.viewed = Array.from({ length: ch.slides }, (_, i) => i + 1);
+      // Rapid progression detection: if 3+ chapters are passed within a
+      // 60-minute window, flag the account for moderator review. This catches
+      // a student who photographs every slide, passes with a bot, and moves
+      // on — the 24h gate slows them, but this flag catches the ones who
+      // somehow bypass it or brute-force during a trial.
+      if (!ch.bonus) {
+        const recentPasses = CHAPTERS.filter(c => c.quiz && !c.bonus && (S.chapters[c.id] || {}).completedAt)
+          .filter(c => Date.now() - (S.chapters[c.id].completedAt) < 60 * 60 * 1000)
+          .length;
+        if (recentPasses >= 3 && !trustHigh()) {
+          S.flags.push({ type: "rapid-progression", ch: ch.id, count: recentPasses, ts: Date.now(), note: recentPasses + " chapters passed in under 60 minutes — likely automated extraction or session theft." });
+          if (S.flags.length > 200) S.flags = S.flags.slice(-200);
+          flagsSync();
+        }
+      }
       addXp(XP_QUIZ_PASS);
       // The Hidden Accumulation: the bonus chapter's pass carries its own badge —
       // the rarest on the journey, because it is the last door before the exam.
@@ -4939,7 +4996,7 @@
     box.innerHTML = `
       <p class="quiz-tag">Your real score</p>
       <div class="reveal-score ${passed ? "pass" : "fail"}"><span id="scoreNum">0</span><small>%</small></div>
-      <p class="finish-score ${passed ? "pass" : "fail"}">${passed ? "Passed — the next chapter is unlocked." : `Not yet — ${PASS_PCT}% to pass. Reflection time begins now.`}</p>
+      <p class="finish-score ${passed ? "pass" : "fail"}">${passed ? "Passed — the next chapter unlocks in 24 hours. Take the time to absorb what you've learned." : `Not yet — ${PASS_PCT}% to pass. Reflection time begins now.`}</p>
       ${badgeRow}
       ${session.recog || ""}
       ${session.nudge || ""}

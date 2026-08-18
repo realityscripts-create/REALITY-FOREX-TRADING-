@@ -18,7 +18,7 @@ const RANKS = [
   { name: "Titan of the Markets", min: 5000, icon: "👑", ic: "crown" }
 ];
 
-const PASS_PCT = 70;
+const PASS_PCT = 80;
 
 // Per-question topic tags — power the performance analytics (weakest/strongest areas)
 const QUIZ_TAGS = {
