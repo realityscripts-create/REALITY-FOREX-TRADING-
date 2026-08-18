@@ -3419,3 +3419,50 @@ body.soft-light { filter: brightness(0.8) sepia(0.35) saturate(0.85) hue-rotate(
 .stat-action { cursor: pointer; transition: all .25s ease; }
 .stat-action:hover { border-color: rgba(212,175,55,.45); background: rgba(212,175,55,.06); transform: translateY(-2px); }
 .stat-action:active { transform: translateY(0); }
+
+/* ---------- Launch countdown (temporary, disappears 30 Sept 2026) ---------- */
+.launch-countdown {
+  display: flex; align-items: center; gap: 18px;
+  background: linear-gradient(135deg, rgba(212,175,55,.08), rgba(212,175,55,.03));
+  border: 1px solid rgba(212,175,55,.3);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 18px;
+  position: relative;
+  overflow: hidden;
+}
+.launch-countdown::before {
+  content: "";
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  background: var(--grad-gold);
+}
+.lc-ic { font-size: 28px; color: var(--accent-gold-light); flex-shrink: 0; }
+.lc-body { flex: 1; }
+.lc-label {
+  font-size: 10px; letter-spacing: 3px; color: var(--accent-gold-light);
+  text-transform: uppercase; font-weight: 700; margin-bottom: 6px;
+}
+.lc-timer {
+  display: flex; align-items: baseline; gap: 4px;
+}
+.lc-unit { text-align: center; }
+.lc-unit b {
+  display: block; font-size: 32px; font-weight: 700; color: #fff;
+  font-variant-numeric: tabular-nums; line-height: 1.1;
+}
+.lc-unit span {
+  font-size: 9px; color: var(--text-muted); text-transform: uppercase;
+  letter-spacing: .8px;
+}
+.lc-sep {
+  font-size: 24px; font-weight: 700; color: rgba(212,175,55,.4);
+  margin: 0 2px; align-self: flex-start; margin-top: 2px;
+}
+.lc-date {
+  font-size: 12px; color: var(--text-muted); margin-top: 8px;
+  font-style: italic;
+}
+@media (max-width: 500px) {
+  .lc-unit b { font-size: 24px; }
+  .lc-timer { gap: 2px; }
+}

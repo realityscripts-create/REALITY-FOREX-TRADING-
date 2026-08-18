@@ -3278,11 +3278,33 @@
       ? `<div class="tour-banner"><b>Your free tour has ended</b><p>Your account and your progress are safe and permanent — enroll to keep your Academy access.</p><a class="btn-gold" href="${esc(academyUrl("member.html"))}">Continue to my RFX account →</a></div>`
       : "";
     const fdCard = foundersDayCard();
-    // The launch countdown + Reserve CTA live on the public website hero,
-    // not here — only students already inside the OS would ever see this
-    // room, and a "Reserve your place" button belongs in front of the
-    // people who haven't enrolled yet.
-    if (founderB || tourB || fdCard) root.appendChild(el("div", "dash-banners", founderB + tourB + fdCard));
+    // Launch countdown — temporary, disappears on 30 September 2026.
+    // Shows on every student's dashboard as a reminder that the Academy
+    // opens its doors on that date. After launch, this block is dead code.
+    const LAUNCH_DATE = new Date("2026-09-30T00:00:00");
+    const now = Date.now();
+    let launchBanner = "";
+    if (now < LAUNCH_DATE.getTime()) {
+      const msLeft = LAUNCH_DATE.getTime() - now;
+      const days = Math.floor(msLeft / 86400000);
+      const hrs = Math.floor((msLeft % 86400000) / 3600000);
+      const mins = Math.floor((msLeft % 3600000) / 60000);
+      launchBanner = `<div class="launch-countdown">
+        <div class="lc-ic">${ICONS.flag}</div>
+        <div class="lc-body">
+          <div class="lc-label">THE DOORS OPEN</div>
+          <div class="lc-timer">
+            <div class="lc-unit"><b>${days}</b><span>days</span></div>
+            <div class="lc-sep">:</div>
+            <div class="lc-unit"><b>${String(hrs).padStart(2, "0")}</b><span>hours</span></div>
+            <div class="lc-sep">:</div>
+            <div class="lc-unit"><b>${String(mins).padStart(2, "0")}</b><span>min</span></div>
+          </div>
+          <div class="lc-date">30 September 2026 · The Academy opens its doors</div>
+        </div>
+      </div>`;
+    }
+    if (founderB || tourB || fdCard || launchBanner) root.appendChild(el("div", "dash-banners", founderB + tourB + fdCard + launchBanner));
     root.appendChild(el("div", "dash-hero", `
       <div class="dash-hero-inner">
         <div>
