@@ -67,20 +67,30 @@
   }
 
   /* --- Auth Gate: the ONLY production entry point for trust/identity ---
-     Flow: token from URL → /api/verify-token → populate S.handoff → create OS session → scrub URL.
-     ANY failure → no auth, no trust, demo state.
+     PRODUCTION: valid System A credential required → otherwise redirect to System A.
+     DEVELOPMENT: fallback to loadHandshake() for offline dev.
+     The raw token is NEVER stored in localStorage, S.handoff, or logs.
      TRUST_VERIFIED is ONLY set inside this function's success path. */
   function rfxAuthGate() {
     var params = new URLSearchParams(location.search);
     var token = params.get("token");
-    if (!token) return Promise.resolve(false);
+    // Step 1: Scrub the credential from the URL immediately (never in history)
+    if (token) history.replaceState(null, "", location.pathname + location.hash);
+    // Step 2: No token → production = redirect, dev = fallback
+    if (!token) {
+      if (!IS_DEV) { window.location.href = academyUrl("member.html"); return Promise.resolve(false); }
+      return Promise.resolve(false);
+    }
+    // Step 3: Validate the credential via System A (the raw token is sent and discarded)
     return verifyToken(token).then(function (res) {
       if (!res || !res.valid) {
-        console.warn("[RFX Auth] Token rejected:", res && res.error);
-        history.replaceState(null, "", location.pathname + location.hash);
+        // Credential rejected → production = redirect, dev = fallback
+        if (!IS_DEV) { window.location.href = academyUrl("member.html"); return false; }
         return false;
       }
       // --- Populate S.handoff from VERIFIED claims (not localStorage) ---
+      // The handoff is a data compatibility structure populated SOLELY from
+      // the verified System A response — it is NOT an independent auth authority.
       S.handoff = {
         studentId: res.studentId,
         studentCode: res.studentCode || "",
@@ -113,16 +123,14 @@
       }
       // --- Create OS session (separate from auth) ---
       createOsSession(res.studentId);
-      // --- Scrub the token from the URL immediately ---
-      history.replaceState(null, "", location.pathname + location.hash);
       // --- Device anchor ---
       if (!S.homeFp) { S.homeFp = deviceInfo().fp; }
       save();
       toast("Welcome, " + (res.verifiedName || res.studentId) + " — authenticated by Reality FX", "rank");
       return true;
     }).catch(function (e) {
-      console.warn("[RFX Auth] Verification failed:", e);
-      history.replaceState(null, "", location.pathname + location.hash);
+      // Network/system error → production = redirect, dev = fallback
+      if (!IS_DEV) { window.location.href = academyUrl("member.html"); return false; }
       return false;
     });
   }
@@ -7744,12 +7752,14 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
     wirePwaInstall();     // the sidebar Install app button — only when the device can install
     wireOsLogout();       // the sidebar Log Out button — banks session time, clears OS session
     // Phase 2: Auth gate runs FIRST — the ONLY production path for identity.
-    // If a token is present, validate it via /api/verify-token.
-    // If validation succeeds, S.handoff is populated from verified claims
-    // and TRUST_VERIFIED is set. If no token or validation fails,
-    // fall through to the old handshake (dev fallback).
-    rfxAuthGate().then(function (authed) {
-      var handshakePromise = authed ? Promise.resolve() : loadHandshake();
+    // PRODUCTION: no valid System A credential → redirect to System A.
+    // DEVELOPMENT: fallback to loadHandshake() for offline dev.
+    rfxAuthGate().then(function () {
+      // At this point: either auth succeeded (AUTH.authenticated = true)
+      // or we're in IS_DEV mode and will fall through to loadHandshake().
+      // In production, rfxAuthGate() already redirected on failure.
+      if (!AUTH.authenticated && !IS_DEV) return; // production redirect in progress
+      var handshakePromise = AUTH.authenticated ? Promise.resolve() : loadHandshake();
       handshakePromise.then(function () {
         save();
         route();
