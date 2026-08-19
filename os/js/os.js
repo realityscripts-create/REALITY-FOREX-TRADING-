@@ -45,6 +45,8 @@
   function studentID() {
     const p = profile();
     if (p.code && /^RFX-\d{5,6}$/.test(p.code)) return p.code;
+    // Handoff may carry the ID even when profile.code isn't set yet
+    if (S.handoff && S.handoff.studentId && /^RFX-\d{5,6}$/.test(S.handoff.studentId)) return S.handoff.studentId;
     return "RFX-DEMO";
   }
   /* Founder Master Key (FOR-LEE §9.39): the handoff carries `founder`
@@ -360,7 +362,15 @@
      gold ring — gold → amber → orange → red as the score falls, matching the
      member panel's visual language. Demo traders (no handoff) have no score
      yet: the ring stays honest and fills the moment their identity links. */
-  let TRUST = null; // { score, restricted } — fetched live from the academy store
+  // Initialise from the handoff record so the ring is accurate from the
+  // very first paint — even when the academy store is unreachable.
+  let TRUST = (function () {
+    const h = S.handoff;
+    if (h && h.trust && typeof h.trust === "object" && typeof h.trust.score === "number")
+      return { score: h.trust.score, restricted: !!h.trust.restricted };
+    if (h && h.founder) return { score: 100, restricted: false };
+    return null;
+  })(); // { score, restricted } — fetched live from the academy store
   const TRUST_BANDS = [
     { min: 100, label: "Excellent standing", color: "#d4af37", note: "The highest tier at Reality FX — the machine is watching, and it approves." },
     { min: 51,  label: "Stable standing",    color: "#d4af37", note: "Your conduct keeps the bar full — that is how trust compounds." },
@@ -382,18 +392,26 @@
     const hoff = handoffRec();
     const sid = hoff && hoff.studentId;
     if (!sid) return;
+    // Founder default: if the academy store doesn't return a trust score,
+    // the founder still stands at 100% until the moderator says otherwise.
+    function founderDefault() {
+      if (!TRUST && isFounder()) {
+        TRUST = { score: 100, restricted: false };
+        try { window.dispatchEvent(new CustomEvent("rfx:trust")); } catch (err) {}
+      }
+    }
     let url;
-    try { url = new URL(academyUrl("api/state"), location.href).href; } catch (e) { return; }
+    try { url = new URL(academyUrl("api/state"), location.href).href; } catch (e) { founderDefault(); return; }
     fetch(url, { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (st) {
-        if (!st || !Array.isArray(st.enrollments)) return;
+        if (!st || !Array.isArray(st.enrollments)) { founderDefault(); return; }
         const e = st.enrollments.find(function (x) { return x && x.studentId === sid; });
-        if (!e || !e.trust) return;
+        if (!e || !e.trust) { founderDefault(); return; }
         TRUST = { score: e.trust.score, restricted: !!e.trust.restricted };
         try { window.dispatchEvent(new CustomEvent("rfx:trust")); } catch (err) {}
       })
-      .catch(function () { /* academy down — the ring keeps its last known value */ });
+      .catch(function () { founderDefault(); });
   }
 
   /* ---------- Founder's Day — 1 November ----------
@@ -3181,8 +3199,11 @@
   /* ---------- Your standing — the Trust Bar ring ---------- */
   function standingCard() {
     const hoff = handoffRec();
-    const t = TRUST;
-    const known = !!(hoff && t && typeof t.score === "number");
+    let t = TRUST;
+    // Founder default: always at 100% standing until the academy says otherwise.
+    if (!t && isFounder()) t = { score: 100, restricted: false };
+    const isF = isFounder();
+    const known = !!(t && typeof t.score === "number" && (hoff || isF));
     const band = known ? trustBand(t.score) : null;
     const pct = known ? Math.max(0, Math.min(100, t.score)) : 0;
     const color = known ? band.color : "#8a8a8a";
