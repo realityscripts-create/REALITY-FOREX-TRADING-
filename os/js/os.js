@@ -929,6 +929,7 @@
 
   /* ---------- Session time tracking (auto-starts on open, pauses when hidden) ---------- */
   let sesStart = Date.now();
+  let sessOpenedAt = Date.now(); // absolute session start — never resets on tab-focus
   let sesTicker = null;
   let sesSaveTimer = null;
   // Time-in-the-game badges — the trader who trains when nobody's watching.
@@ -985,13 +986,16 @@
   // One display source of truth — every surface (interval, tab-return,
   // route re-render) snaps the LIVE SESSION pill to the true value, so a
   // throttled/backgrounded tab can never leave a frozen number on screen.
-  // Shows TOTAL cumulative study time — the student's career hours.
+  // Shows current session time (big) + total career hours (small).
   function refreshSessDisplay() {
     const t = document.getElementById("sessTimer");
     if (!t) return;
+    const currentSecs = Math.round((Date.now() - sessOpenedAt) / 1000);
     const delta = Math.round((Date.now() - sesStart) / 1000);
     const total = (S.secs || 0) + delta;
-    t.textContent = fmtClock(total);
+    t.textContent = fmtClock(currentSecs);
+    const totEl = document.getElementById("sessTotal");
+    if (totEl) totEl.textContent = "Total: " + fmtClock(total);
   }
   function startSessionClock() {
     if (sesTicker) return;
@@ -3322,7 +3326,7 @@
             ${tourChip()}
             <div class="sess-chip" title="Live session timer — auto-starts when you open the academy, stops when you leave">
               <span class="sess-dot"></span>
-              <div><p class="sess-lbl">Live session</p><p class="sess-time" id="sessTimer">0:00</p></div>
+              <div><p class="sess-lbl">Live session</p><p class="sess-time" id="sessTimer">0:00</p><p class="sess-total" id="sessTotal"></p></div>
             </div>
           </div>
           <div class="ring-side">
