@@ -362,15 +362,7 @@
      gold ring — gold → amber → orange → red as the score falls, matching the
      member panel's visual language. Demo traders (no handoff) have no score
      yet: the ring stays honest and fills the moment their identity links. */
-  // Initialise from the handoff record so the ring is accurate from the
-  // very first paint — even when the academy store is unreachable.
-  let TRUST = (function () {
-    const h = S.handoff;
-    if (h && h.trust && typeof h.trust === "object" && typeof h.trust.score === "number")
-      return { score: h.trust.score, restricted: !!h.trust.restricted };
-    if (h && h.founder) return { score: 100, restricted: false };
-    return null;
-  })(); // { score, restricted } — fetched live from the academy store
+  let TRUST = null; // { score, restricted } — initialised lazily after S loads
   const TRUST_BANDS = [
     { min: 100, label: "Excellent standing", color: "#d4af37", note: "The highest tier at Reality FX — the machine is watching, and it approves." },
     { min: 51,  label: "Stable standing",    color: "#d4af37", note: "Your conduct keeps the bar full — that is how trust compounds." },
@@ -878,6 +870,17 @@
     catch (e) { return defaultState(); }
   }
   let S = load();
+  // Lazy-initialise TRUST from the handoff record so the ring is accurate
+  // from the very first paint — even when the academy store is unreachable.
+  (function initTrustFromHandoff() {
+    const h = S.handoff;
+    if (!TRUST) {
+      if (h && h.trust && typeof h.trust === "object" && typeof h.trust.score === "number")
+        TRUST = { score: h.trust.score, restricted: !!h.trust.restricted };
+      else if (h && h.founder)
+        TRUST = { score: 100, restricted: false };
+    }
+  })();
   /* Multi-tab safe save — the OS state (live session seconds, XP, progress)
      lives in localStorage, and with the OS open in two tabs (preview + own
      browser) a stale tab's flush used to write its OLD base over the fresher
