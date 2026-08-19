@@ -880,15 +880,21 @@
   // The founder fallback is DEV-ONLY: in production, trust requires a
   // verified System A token. A forged S.handoff.founder in localStorage
   // produces nothing — the path is structurally dead outside localhost.
-  (function initTrustFromHandoff() {
-    const h = S.handoff;
-    if (!TRUST) {
-      if (h && h.trust && typeof h.trust === "object" && typeof h.trust.score === "number")
-        TRUST = { score: h.trust.score, restricted: !!h.trust.restricted };
-      else if (IS_DEV && h && h.founder)
-        TRUST = { score: 100, restricted: false };
-    }
-  })();
+  // DEV-ONLY: load cached trust from localStorage for offline development.
+  // In production, localStorage trust is UNTRUSTED — only a verified
+  // System A token response can populate TRUST. A forged handoff.trust
+  // in localStorage produces nothing.
+  if (IS_DEV) {
+    (function initTrustFromHandoff() {
+      const h = S.handoff;
+      if (!TRUST) {
+        if (h && h.trust && typeof h.trust === "object" && typeof h.trust.score === "number")
+          TRUST = { score: h.trust.score, restricted: !!h.trust.restricted };
+        else if (h && h.founder)
+          TRUST = { score: 100, restricted: false };
+      }
+    })();
+  }
   /* Multi-tab safe save — the OS state (live session seconds, XP, progress)
      lives in localStorage, and with the OS open in two tabs (preview + own
      browser) a stale tab's flush used to write its OLD base over the fresher
