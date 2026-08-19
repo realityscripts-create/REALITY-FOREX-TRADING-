@@ -12,6 +12,121 @@
      (any real domain), these paths are structurally dead — the OS will
      never trust a local founder flag or a forged handoff record. */
   const IS_DEV = location.hostname === "localhost" || location.hostname === "127.0.0.1";
+
+  /* ================================================================
+     Phase 2 — Auth State & OS Session (separate from trust/identity)
+     ================================================================
+     AUTH = who the user IS (verified by System A cryptographic token)
+     OS_SESSION = what the user is DOING right now (study session)
+
+     AUTH is established ONCE at login and never manufactured locally.
+     OS_SESSION is created AFTER auth and manages live time.
+
+     The OS never authenticates — it only validates a token that
+     System A already authenticated. The OS may manage a session,
+     but it may never manufacture an identity.
+     ================================================================ */
+  const AUTH = { authenticated: false, studentId: null, verifiedName: null, founder: false, status: null, permissions: null, authIssuedAt: null, authExpiresAt: null, authJti: null };
+  const OS_SESSION = { id: null, startedAt: null, lastActivity: null, status: "idle" };
+
+  /* --- Token Verification (calls System A's /api/verify-token) ---
+     The OS sends the raw token to System A's verification endpoint.
+     System A validates: signature, expiry, iss, aud, jti/replay.
+     Returns { valid, studentId, verifiedName, founder, trust, ... } or { valid: false }.
+     The OS must NEVER possess the signing key. */
+  function verifyToken(token) {
+    return fetch(academyUrl("api/verify-token"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: token }),
+      cache: "no-store"
+    }).then(function (r) { return r.ok ? r.json() : { valid: false, error: "server-error" }; })
+      .catch(function () { return { valid: false, error: "network-error" }; });
+  }
+
+  /* --- OS Session Management ---
+     Created AFTER successful token verification.
+     One student → one active OS session. Multiple tabs reuse the same session.
+     Duration is banked ONLY on logout (sesBank) — checkpoints save state only. */
+  function createOsSession(studentId) {
+    OS_SESSION.id = "OS-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+    OS_SESSION.startedAt = Date.now();
+    OS_SESSION.lastActivity = Date.now();
+    OS_SESSION.status = "active";
+    S._osSession = { id: OS_SESSION.id, studentId: studentId, startedAt: OS_SESSION.startedAt, status: "active" };
+    save();
+  }
+  function osSessionActive() {
+    const s = S._osSession;
+    return !!(s && s.status === "active" && s.id && s.studentId);
+  }
+  function clearOsSession(reason) {
+    OS_SESSION.id = null; OS_SESSION.startedAt = null; OS_SESSION.lastActivity = null; OS_SESSION.status = "idle";
+    if (S._osSession) { S._osSession.status = "ended"; S._osSession.endedReason = reason; }
+    save();
+  }
+
+  /* --- Auth Gate: the ONLY production entry point for trust/identity ---
+     Flow: token from URL → /api/verify-token → populate S.handoff → create OS session → scrub URL.
+     ANY failure → no auth, no trust, demo state.
+     TRUST_VERIFIED is ONLY set inside this function's success path. */
+  function rfxAuthGate() {
+    var params = new URLSearchParams(location.search);
+    var token = params.get("token");
+    if (!token) return Promise.resolve(false);
+    return verifyToken(token).then(function (res) {
+      if (!res || !res.valid) {
+        console.warn("[RFX Auth] Token rejected:", res && res.error);
+        history.replaceState(null, "", location.pathname + location.hash);
+        return false;
+      }
+      // --- Populate S.handoff from VERIFIED claims (not localStorage) ---
+      S.handoff = {
+        studentId: res.studentId,
+        studentCode: res.studentCode || "",
+        status: res.status || "ACTIVE",
+        printTrust: res.printTrust || "standard",
+        founder: !!res.founder,
+        role: res.role || "",
+        trust: (res.trust && typeof res.trust === "object") ? res.trust : null,
+        receivedAt: new Date().toISOString()
+      };
+      // --- Populate profile from verified identity ---
+      var p = profile();
+      if (res.verifiedName) { p.name = res.verifiedName; S.name = res.verifiedName; }
+      if (res.studentId) p.code = res.studentId;
+      if (res.email) p.email = res.email;
+      // --- Set AUTH state (separate from OS session) ---
+      AUTH.authenticated = true;
+      AUTH.studentId = res.studentId;
+      AUTH.verifiedName = res.verifiedName || null;
+      AUTH.founder = !!res.founder;
+      AUTH.status = res.status || "ACTIVE";
+      AUTH.permissions = res.permissions || null;
+      AUTH.authIssuedAt = res.iat || Math.floor(Date.now() / 1000);
+      AUTH.authExpiresAt = res.exp || null;
+      AUTH.authJti = res.jti || null;
+      // --- Set trust from verified System A response ---
+      if (res.trust && typeof res.trust.score === "number") {
+        TRUST = { score: res.trust.score, restricted: !!res.trust.restricted };
+        TRUST_VERIFIED = true;  // <-- THE ONLY PRODUCTION PATH that sets this to true
+      }
+      // --- Create OS session (separate from auth) ---
+      createOsSession(res.studentId);
+      // --- Scrub the token from the URL immediately ---
+      history.replaceState(null, "", location.pathname + location.hash);
+      // --- Device anchor ---
+      if (!S.homeFp) { S.homeFp = deviceInfo().fp; }
+      save();
+      toast("Welcome, " + (res.verifiedName || res.studentId) + " — authenticated by Reality FX", "rank");
+      return true;
+    }).catch(function (e) {
+      console.warn("[RFX Auth] Verification failed:", e);
+      history.replaceState(null, "", location.pathname + location.hash);
+      return false;
+    });
+  }
+
   /* The launch countdown lives on the PUBLIC website hero (System A
      index.html) — the OS is the guarded classroom, so a "Reserve your
      place" CTA there would only ever reach people already enrolled. */
@@ -407,7 +522,9 @@
         const e = st.enrollments.find(function (x) { return x && x.studentId === sid; });
         if (!e || !e.trust) { founderDefault(); return; }
         TRUST = { score: e.trust.score, restricted: !!e.trust.restricted };
-        TRUST_VERIFIED = true;
+        // NOTE: TRUST_VERIFIED is NOT set here. It is ONLY set by rfxAuthGate()
+        // (the verified System A authentication path). fetchTrust() refreshes the
+        // score data but does not establish authentication authority.
         try { window.dispatchEvent(new CustomEvent("rfx:trust")); } catch (err) {}
       })
       .catch(function () { founderDefault(); });
@@ -1789,11 +1906,19 @@
       // 2. Stop the session clock
       if (sesTicker) { clearInterval(sesTicker); sesTicker = null; }
       if (sesSaveTimer) { clearInterval(sesSaveTimer); sesSaveTimer = null; }
-      // 3. Clear the active session markers
+      // 3. End OS session (Attack G: prevent identity leakage to next student)
+      clearOsSession("logout");
+      // 4. Clear AUTH state (no identity carries over)
+      AUTH.authenticated = false; AUTH.studentId = null; AUTH.verifiedName = null;
+      AUTH.founder = false; AUTH.status = null; AUTH.permissions = null;
+      AUTH.authIssuedAt = null; AUTH.authExpiresAt = null; AUTH.authJti = null;
+      // 5. Clear trust (no trust carries over)
+      TRUST = null; TRUST_VERIFIED = false;
+      // 6. Clear the active session markers
       delete S._activeSessionStart;
       delete S._lastCheckpoint;
       save();
-      // 4. Show the banking result
+      // 7. Show the banking result
       const timerEl = document.getElementById("sessTimer");
       if (timerEl) {
         timerEl.textContent = "— ended —";
@@ -1801,7 +1926,7 @@
       }
       const totEl = document.getElementById("sessTotal");
       if (totEl) totEl.textContent = fmtClock(S.secs || 0);
-      // 5. Brief delay then redirect to System A (the Fort)
+      // 8. Brief delay then redirect to System A (the Fort)
       const sessionDuration = fmtClock(Math.round((Date.now() - sessOpenedAt) / 1000));
       toast("Session banked — " + sessionDuration + " credited to your Academy time.", "rank");
       setTimeout(function () {
@@ -7604,25 +7729,39 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
     if (sidebarEl) sidebarEl.addEventListener("click", function (e) {
       if (e.target.closest("a.nav-item, .academy-link")) closeNav();
     });
+    // Restore OS session from storage (if returning from a refresh)
+    if (S._osSession && S._osSession.status === "active") {
+      OS_SESSION.id = S._osSession.id;
+      OS_SESSION.startedAt = S._osSession.startedAt;
+      OS_SESSION.lastActivity = Date.now();
+      OS_SESSION.status = "active";
+      sessOpenedAt = S._osSession.startedAt;
+    }
     startSessionClock(); // live session timer begins the moment the academy opens
     checkTimeBadges();    // credit any time-in-the-game badges already banked from earlier sessions
     captureAcademyBase(); // remember where the student came from (demo: the member panel's origin)
     applySoftLight();     // restore the student's yellow light mode without a flash
     wirePwaInstall();     // the sidebar Install app button — only when the device can install
     wireOsLogout();       // the sidebar Log Out button — banks session time, clears OS session
-    // Handshake with System A: greet a verified student by identity (from
-    // ?sid=) when the handoff store is reachable; otherwise stay a local demo.
-    loadHandshake().then(function () {
-      save();
-      route();
-      wireAcademyLinks(); // the return trip: My RFX Account + Reception (verified students only)
-      startAcademyHealth(); // stale-server check — is the academy link live, stale or unreachable?
-      ensureTrustLoaded(); // the hall pass must be armed before the first lesson — never flag a trusted student
-      runDeviceCheck();   // "Is this really you?" — the device gate precedes the session claim
-      initSessionGuard(); // single-session guard — only acts when verified
-      flagsSync();        // push any integrity flags raised since the last report
-      startSysCheck();    // the machine watching the machine — clock, storage, rail
-      maybeNudgeSoftLight(); // the evening eye-shield ask — once per day, in the golden window
+    // Phase 2: Auth gate runs FIRST — the ONLY production path for identity.
+    // If a token is present, validate it via /api/verify-token.
+    // If validation succeeds, S.handoff is populated from verified claims
+    // and TRUST_VERIFIED is set. If no token or validation fails,
+    // fall through to the old handshake (dev fallback).
+    rfxAuthGate().then(function (authed) {
+      var handshakePromise = authed ? Promise.resolve() : loadHandshake();
+      handshakePromise.then(function () {
+        save();
+        route();
+        wireAcademyLinks(); // the return trip: My RFX Account + Reception (verified students only)
+        startAcademyHealth(); // stale-server check — is the academy link live, stale or unreachable?
+        ensureTrustLoaded(); // the hall pass must be armed before the first lesson — never flag a trusted student
+        runDeviceCheck();   // "Is this really you?" — the device gate precedes the session claim
+        initSessionGuard(); // single-session guard — only acts when verified
+        flagsSync();        // push any integrity flags raised since the last report
+        startSysCheck();    // the machine watching the machine — clock, storage, rail
+        maybeNudgeSoftLight(); // the evening eye-shield ask — once per day, in the golden window
+      });
     });
   });
 })();
