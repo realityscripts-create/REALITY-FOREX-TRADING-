@@ -1173,7 +1173,8 @@
     map:     ICON('<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>'),
     key:     ICON('<path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>'),
     grad:    ICON('<path d="M22 10L12 5 2 10l10 5 10-5z"/><path d="M6 12.5V16c0 1.7 2.7 3 6 3s6-1.3 6-3v-3.5"/>'),
-    user:    ICON('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>')
+    user:    ICON('<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>'),
+    logout:  ICON('<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>')
   };
   const NAV_ICONS = {
     profile: "user", "": "home", map: "map", progress: "chart", mod: "shield",
@@ -1716,6 +1717,36 @@
     // to Home Screen hint (dispatched by RFXInstallApp on iOS).
     if (/iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)) show();
     btn.addEventListener("click", () => { btn.classList.remove("hinting"); try { window.RFXInstallApp(); } catch (e) {} });
+  }
+
+  /* ---------- OS Logout — banks session time, clears OS session ---------- */
+  function wireOsLogout() {
+    const btn = document.getElementById("osLogoutBtn");
+    if (!btn) return;
+    btn.addEventListener("click", function () {
+      // 1. Bank the current session time into total
+      sesFlush();
+      // 2. Show the banking animation (if the chip exists)
+      const timerEl = document.getElementById("sessTimer");
+      if (timerEl) {
+        timerEl.textContent = "— session ended —";
+        timerEl.style.color = "var(--text-dim)";
+      }
+      const totEl = document.getElementById("sessTotal");
+      if (totEl) totEl.textContent = fmtClock(S.secs || 0);
+      // 3. Stop the session clock
+      if (sesTicker) { clearInterval(sesTicker); sesTicker = null; }
+      if (sesSaveTimer) { clearInterval(sesSaveTimer); sesSaveTimer = null; }
+      // 4. Final save
+      save();
+      // 5. Brief delay then redirect to System A (the Fort)
+      toast("Session banked — " + fmtClock(Math.round((Date.now() - sessOpenedAt) / 1000)) + " credited to your Academy time.", "rank");
+      setTimeout(function () {
+        // Redirect to the member panel (System A) — the only front door
+        const memberUrl = window.ACADEMY_BASE ? ACADEMY_BASE + "/member.html" : "../member.html";
+        window.location.href = memberUrl;
+      }, 2200);
+    });
   }
 
   /* ---------- Router ---------- */
@@ -7510,6 +7541,7 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
     captureAcademyBase(); // remember where the student came from (demo: the member panel's origin)
     applySoftLight();     // restore the student's yellow light mode without a flash
     wirePwaInstall();     // the sidebar Install app button — only when the device can install
+    wireOsLogout();       // the sidebar Log Out button — banks session time, clears OS session
     // Handshake with System A: greet a verified student by identity (from
     // ?sid=) when the handoff store is reachable; otherwise stay a local demo.
     loadHandshake().then(function () {

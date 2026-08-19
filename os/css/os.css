@@ -358,6 +358,16 @@ body.nav-open { overflow: hidden; }
   0%, 100% { box-shadow: 0 0 3px rgba(212,175,55,.15); }
   50% { box-shadow: 0 0 16px rgba(212,175,55,.45); }
 }
+.os-logout-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; margin-top: 10px;
+  padding: 10px 16px; border-radius: 10px;
+  background: rgba(180, 40, 30, 0.15); border: 1px solid rgba(180, 40, 30, 0.35);
+  color: #e8b4b4; font-size: 12px; font-weight: 600; letter-spacing: .8px;
+  cursor: pointer; transition: all .2s;
+}
+.os-logout-btn:hover { background: rgba(180, 40, 30, 0.3); border-color: rgba(180, 40, 30, 0.6); color: #fff; }
+.os-logout-btn .ni-ic { display: inline-flex; }
 .side-rank { display: flex; align-items: center; gap: 12px; }
 .side-rank .rank-ic { font-size: 26px; }
 .side-rank .rank-name { font-family: var(--font-heading); font-size: 15px; color: var(--accent-gold-light); }
