@@ -368,6 +368,7 @@
      member panel's visual language. Demo traders (no handoff) have no score
      yet: the ring stays honest and fills the moment their identity links. */
   let TRUST = null; // { score, restricted } — initialised lazily after S loads
+  let TRUST_VERIFIED = false; // ONLY true when score comes from verified System A academy response or IS_DEV
   const TRUST_BANDS = [
     { min: 100, label: "Excellent standing", color: "#d4af37", note: "The highest tier at Reality FX — the machine is watching, and it approves." },
     { min: 51,  label: "Stable standing",    color: "#d4af37", note: "Your conduct keeps the bar full — that is how trust compounds." },
@@ -384,7 +385,7 @@
   // The Trust Bar is the hall pass: a verified student whose bar is high is
   // trusted by the machine. Timing-based suspicion gets a second read through
   // trust — fast + trusted earns recognition, fast + untrusted is evidence.
-  function trustHigh() { return !!(TRUST && typeof TRUST.score === "number" && TRUST.score >= 80); }
+  function trustHigh() { return !!(TRUST_VERIFIED && TRUST && typeof TRUST.score === "number" && TRUST.score >= 80); }
   function fetchTrust() {
     const hoff = handoffRec();
     const sid = hoff && hoff.studentId;
@@ -406,6 +407,7 @@
         const e = st.enrollments.find(function (x) { return x && x.studentId === sid; });
         if (!e || !e.trust) { founderDefault(); return; }
         TRUST = { score: e.trust.score, restricted: !!e.trust.restricted };
+        TRUST_VERIFIED = true;
         try { window.dispatchEvent(new CustomEvent("rfx:trust")); } catch (err) {}
       })
       .catch(function () { founderDefault(); });
@@ -888,10 +890,13 @@
     (function initTrustFromHandoff() {
       const h = S.handoff;
       if (!TRUST) {
-        if (h && h.trust && typeof h.trust === "object" && typeof h.trust.score === "number")
+        if (h && h.trust && typeof h.trust === "object" && typeof h.trust.score === "number") {
           TRUST = { score: h.trust.score, restricted: !!h.trust.restricted };
-        else if (h && h.founder)
+          TRUST_VERIFIED = true;
+        } else if (h && h.founder) {
           TRUST = { score: 100, restricted: false };
+          TRUST_VERIFIED = true;
+        }
       }
     })();
   }
@@ -3220,7 +3225,10 @@
     // Founder default: DEV-ONLY. In production, trust requires a verified
     // System A token — a forged S.handoff.founder is structurally ignored.
     if (IS_DEV && !t && isFounder()) t = { score: 100, restricted: false };
-    const known = !!(t && typeof t.score === "number" && hoff);
+    // Production trust can ONLY originate from verified System A authentication.
+    // TRUST_VERIFIED is only set by fetchTrust() (academy server response) or IS_DEV.
+    // A forged S.handoff in localStorage cannot produce a trusted-looking score.
+    const known = !!(TRUST_VERIFIED && t && typeof t.score === "number" && hoff);
     const band = known ? trustBand(t.score) : null;
     const pct = known ? Math.max(0, Math.min(100, t.score)) : 0;
     const color = known ? band.color : "#8a8a8a";
@@ -3296,7 +3304,7 @@
       { ic: ICONS.diamond, name: "Distinction streak", req: "3 chapters in a row at 80%+", got: (S.distStreak || 0) >= 3 },
       { ic: ICONS.medal, name: "Elite lane completion", req: "Finish a chapter on the Elite tier", got: eliteDone() },
       { ic: ICONS.target, name: "Sharpshooter", req: "90%+ accuracy across 100+ answers", got: accN >= 100 && accPct >= 90 },
-      { ic: ICONS.crown, name: "Founder's Circle", req: "Verified identity · excellent standing", got: !!(TRUST && TRUST.score >= 90) }
+      { ic: ICONS.crown, name: "Founder's Circle", req: "Verified identity · excellent standing", got: !!(TRUST_VERIFIED && TRUST && TRUST.score >= 90) }
     ];
     const card = el("div", "panel hof-panel");
     card.innerHTML = `
