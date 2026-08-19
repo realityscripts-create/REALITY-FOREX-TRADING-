@@ -966,13 +966,24 @@
     // boot-time pass makes it self-healing for any edge case that misses it.
     if (studyStreakDays() >= 3) awardTimeBadge("study3");
   }
-  function sesFlush() {
-    const delta = Math.round((Date.now() - sesStart) / 1000);
-    sesStart = Date.now();
+  // Checkpoint: save the active session state WITHOUT depositing into S.secs.
+  // S.secs (TOTAL) remains completely static during an active session.
+  // Called by: 30s interval, beforeunload, visibilitychange (hide).
+  function sesCheckpoint() {
+    // Save the session start time so we can resume if the tab returns
+    S._activeSessionStart = sessOpenedAt;
+    S._lastCheckpoint = Date.now();
+    save();
+  }
+  // Bank: deposit the session duration into S.secs. Called ONLY by:
+  // 1. The Logout button (explicit user action)
+  // 2. Server-side session expiry (future Phase 2)
+  // This is the ONLY function that modifies S.secs during a session.
+  function sesBank() {
+    const delta = Math.round((Date.now() - sessOpenedAt) / 1000);
     if (delta <= 0) return;
     S.secs = (S.secs || 0) + delta;
-    // Credit a study day once a real 60s of focus is banked — opening and
-    // closing in a blink doesn't earn the Unseen Grind badge.
+    // Credit a study day once a real 60s of focus is banked
     const k = todayKey();
     if (k !== (S.dayKey || "")) { S.dayKey = k; S.daySecs = 0; }
     S.daySecs = (S.daySecs || 0) + delta;
@@ -998,17 +1009,26 @@
   function startSessionClock() {
     if (sesTicker) return;
     sesStart = Date.now();
-    // live display every second; persist only every 30s (avoid serializing the whole state each tick)
+    // live display every second; checkpoint session state every 30s (NOT banking into S.secs)
     sesTicker = setInterval(refreshSessDisplay, 1000);
-    sesSaveTimer = setInterval(() => { if (!document.hidden) sesFlush(); }, 30000);
-    window.addEventListener("beforeunload", () => { if (!document.hidden) sesFlush(); });
-    // pause while the tab is hidden — study time should be real, focused time.
-    // The 30s bank skips while hidden (background timers would otherwise farm
-    // hours), and the hide transition banks only the visible time since the
-    // last flush. Coming back resets the window.
+    sesSaveTimer = setInterval(() => { if (!document.hidden) sesCheckpoint(); }, 30000);
+    // beforeunload: save session state only — banking happens ONLY on Logout
+    window.addEventListener("beforeunload", () => { if (!document.hidden) sesCheckpoint(); });
+    // visibilitychange: student may simply switch tabs temporarily.
+    // Do NOT bank time. Just pause the live counter and resume when they return.
     document.addEventListener("visibilitychange", () => {
-      if (document.hidden) sesFlush();
-      else { sesStart = Date.now(); refreshSessDisplay(); }
+      if (document.hidden) {
+        // Tab hidden — save checkpoint, pause the live counter
+        sesCheckpoint();
+        if (sesTicker) clearInterval(sesTicker);
+        sesTicker = null;
+      } else {
+        // Tab visible again — resume the live counter from session start
+        sesStart = Date.now();
+        sessOpenedAt = S._activeSessionStart || sessOpenedAt;
+        sesTicker = setInterval(refreshSessDisplay, 1000);
+        refreshSessDisplay();
+      }
     });
     // a tab restored from Chrome's frozen/backgrounded state snaps the pill
     // back to the true banked time the instant the user looks at it
@@ -1724,25 +1744,27 @@
     const btn = document.getElementById("osLogoutBtn");
     if (!btn) return;
     btn.addEventListener("click", function () {
-      // 1. Bank the current session time into total
-      sesFlush();
-      // 2. Show the banking animation (if the chip exists)
+      // 1. BANK the session — this is the ONLY place S.secs gets modified
+      sesBank();
+      // 2. Stop the session clock
+      if (sesTicker) { clearInterval(sesTicker); sesTicker = null; }
+      if (sesSaveTimer) { clearInterval(sesSaveTimer); sesSaveTimer = null; }
+      // 3. Clear the active session markers
+      delete S._activeSessionStart;
+      delete S._lastCheckpoint;
+      save();
+      // 4. Show the banking result
       const timerEl = document.getElementById("sessTimer");
       if (timerEl) {
-        timerEl.textContent = "— session ended —";
+        timerEl.textContent = "— ended —";
         timerEl.style.color = "var(--text-dim)";
       }
       const totEl = document.getElementById("sessTotal");
       if (totEl) totEl.textContent = fmtClock(S.secs || 0);
-      // 3. Stop the session clock
-      if (sesTicker) { clearInterval(sesTicker); sesTicker = null; }
-      if (sesSaveTimer) { clearInterval(sesSaveTimer); sesSaveTimer = null; }
-      // 4. Final save
-      save();
       // 5. Brief delay then redirect to System A (the Fort)
-      toast("Session banked — " + fmtClock(Math.round((Date.now() - sessOpenedAt) / 1000)) + " credited to your Academy time.", "rank");
+      const sessionDuration = fmtClock(Math.round((Date.now() - sessOpenedAt) / 1000));
+      toast("Session banked — " + sessionDuration + " credited to your Academy time.", "rank");
       setTimeout(function () {
-        // Redirect to the member panel (System A) — the only front door
         const memberUrl = window.ACADEMY_BASE ? ACADEMY_BASE + "/member.html" : "../member.html";
         window.location.href = memberUrl;
       }, 2200);
