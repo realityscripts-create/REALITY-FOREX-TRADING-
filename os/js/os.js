@@ -7,6 +7,11 @@
   "use strict";
 
   const KEY = "rfx_os_v1";
+  /* Development mode gate: founder fallback and demo handoffs are ONLY
+     active when the OS runs on localhost (dev server). In production
+     (any real domain), these paths are structurally dead — the OS will
+     never trust a local founder flag or a forged handoff record. */
+  const IS_DEV = location.hostname === "localhost" || location.hostname === "127.0.0.1";
   /* The launch countdown lives on the PUBLIC website hero (System A
      index.html) — the OS is the guarded classroom, so a "Reserve your
      place" CTA there would only ever reach people already enrolled. */
@@ -384,10 +389,10 @@
     const hoff = handoffRec();
     const sid = hoff && hoff.studentId;
     if (!sid) return;
-    // Founder default: if the academy store doesn't return a trust score,
-    // the founder still stands at 100% until the moderator says otherwise.
+    // Founder default: DEV-ONLY. In production, trust requires a verified
+    // System A token. A forged S.handoff.founder in localStorage is ignored.
     function founderDefault() {
-      if (!TRUST && isFounder()) {
+      if (IS_DEV && !TRUST && isFounder()) {
         TRUST = { score: 100, restricted: false };
         try { window.dispatchEvent(new CustomEvent("rfx:trust")); } catch (err) {}
       }
@@ -872,12 +877,15 @@
   let S = load();
   // Lazy-initialise TRUST from the handoff record so the ring is accurate
   // from the very first paint — even when the academy store is unreachable.
+  // The founder fallback is DEV-ONLY: in production, trust requires a
+  // verified System A token. A forged S.handoff.founder in localStorage
+  // produces nothing — the path is structurally dead outside localhost.
   (function initTrustFromHandoff() {
     const h = S.handoff;
     if (!TRUST) {
       if (h && h.trust && typeof h.trust === "object" && typeof h.trust.score === "number")
         TRUST = { score: h.trust.score, restricted: !!h.trust.restricted };
-      else if (h && h.founder)
+      else if (IS_DEV && h && h.founder)
         TRUST = { score: 100, restricted: false };
     }
   })();
@@ -3203,10 +3211,10 @@
   function standingCard() {
     const hoff = handoffRec();
     let t = TRUST;
-    // Founder default: always at 100% standing until the academy says otherwise.
-    if (!t && isFounder()) t = { score: 100, restricted: false };
-    const isF = isFounder();
-    const known = !!(t && typeof t.score === "number" && (hoff || isF));
+    // Founder default: DEV-ONLY. In production, trust requires a verified
+    // System A token — a forged S.handoff.founder is structurally ignored.
+    if (IS_DEV && !t && isFounder()) t = { score: 100, restricted: false };
+    const known = !!(t && typeof t.score === "number" && hoff);
     const band = known ? trustBand(t.score) : null;
     const pct = known ? Math.max(0, Math.min(100, t.score)) : 0;
     const color = known ? band.color : "#8a8a8a";
