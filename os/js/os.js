@@ -1640,10 +1640,11 @@
   };
   const TIER_ORDER = ["standard", "challenging", "elite"];
   // Exam protocol: Challenging and Elite quizzes run a real-time exam clock
-  // (Standard stays untimed). Institutions don't let a student stare at one
-  // question for five minutes — neither do we. 10 questions: 90s each in
-  // Challenging, 2m each in Elite (five options, deeper maths).
-  const EXAM_MIN = { challenging: 15, elite: 20 };
+  // (Standard stays untimed). Timing is now driven by ASSESS_BLUEPRINTS —
+  // each chapter's exam duration is derived from its scope, breadth, cognitive
+  // demand and practical application. The blueprintMins(chId, tier) function
+  // returns the calibrated minutes per the founder's directive: assessment
+  // duration must be intelligently set, never arbitrary.
   function tierKey() { return S.tier && TIERS[S.tier] ? S.tier : "standard"; }
   function tierName() { return TIERS[tierKey()].name; }
   function tierTag() { return TIERS[tierKey()].tag; }
@@ -4289,7 +4290,7 @@
           <div class="j-meta">
             <span>${deck.slides} slides</span>
             <span>${deck.quiz ? deck.quiz.length + " assessment Qs" : "assessment bank pending"}</span>
-            <span class="j-time" title="Reading + assessment time">≈ ${fmtDur(chapterTotalMins(ch))}${deck.quiz ? ` <small>· +${fmtDur(quizMins(ch))} assessment</small>` : ""}</span>
+            <span class="j-time" title="Reading + assessment time">≈ ${fmtDur(chapterTotalMins(ch))}${deck.quiz ? (tierKey() !== 'standard' ? ` <small>· +${fmtDur(blueprintMins(ch.id, tierKey()) * 60000)} exam</small>` : ` <small>· +${fmtDur(quizMins(ch))} assessment</small>`) : ""}</span>
             ${diffChip(ch)}
             ${chBest(ch.id) > 0 ? `<span class="j-best">best ${chBest(ch.id)}%</span>` : ""}
             ${badges ? `<span class="j-best" title="Badges earned">${badges}</span>` : ""}
@@ -4312,18 +4313,18 @@
     const gem = el("div", "j-node hidden-reveal" + (gemDone ? " done" : " open") + (gemJustOpened ? " just-unlocked" : ""), `
         <div class="j-dot">${gemDone ? "✓" : ICONS.diamond}</div>
         <div class="j-card">
-          <div class="j-top"><span class="j-num">Hidden Chapter · Bonus</span><span class="j-status">${gemDone ? "Complete" : "Discovered"}</span></div>
+          <div class="j-top"><span class="j-num">${gemDone ? "Complete" : "✦ Final Chapter"}</span><span class="j-status">${gemDone ? "Accumulated" : "Awaits"}</span></div>
           <h3 class="gold-serif">${esc(BONUS_CHAPTER.title)}</h3>
           <p class="j-focus">${esc(BONUS_CHAPTER.focus)}</p>
           <div class="j-meta">
             <span>${BONUS_CHAPTER.native.length} cards</span>
             <span>${BONUS_CHAPTER.quiz.length} assessment Qs</span>
-            <span class="j-time" title="Reading + assessment time">≈ ${fmtDur(chapterTotalMins(BONUS_CHAPTER))} · +${fmtDur(quizMins(BONUS_CHAPTER))} assessment</span>
+            <span class="j-time" title="Reading + assessment time">≈ ${fmtDur(chapterTotalMins(BONUS_CHAPTER))}${tierKey() !== 'standard' ? ` · +${fmtDur(blueprintMins('bonus', tierKey()) * 60000)} exam` : ` · +${fmtDur(quizMins(BONUS_CHAPTER))} assessment`}</span>
             ${diffChip(BONUS_CHAPTER)}
             ${gemDone ? `<span class="j-best">best ${chBest(BONUS_CHAPTER.id)}%</span>` : ""}
           </div>
-          <p class="gem-note">${ICONS.sparkle} You have completed the thirteen chapters. That puts you ahead of every trader who ever opened a chart without studying the psychology behind it. This is the accumulation — the framework for what happens after the entry, when the market tests your discipline.</p>
-          <button class="btn-gold j-go" data-go="${BONUS_CHAPTER.id}">${gemDone ? "Review The Accumulation" : "Enter The Accumulation"}</button>
+          <p class="gem-note">${ICONS.sparkle} You have done what most traders never do — you studied the part of trading that happens after the entry. Thirteen chapters behind you. The psychology that separates survivors from statistics is ahead of you. This is where everything you learned becomes something you own.</p>
+          <button class="btn-gold j-go" data-go="${BONUS_CHAPTER.id}">${gemDone ? "Re-enter The Accumulation" : "Begin The Accumulation"}</button>
         </div>`);
     if (allChDone) {
       gem.querySelector(".j-go").addEventListener("click", () => location.hash = "#/lesson/" + BONUS_CHAPTER.id);
@@ -4459,7 +4460,7 @@
       <button class="btn-ghost back" data-go="map">← Journey</button>
       <div class="lesson-title"><span class="j-num">Chapter ${fmt(ch.id)}</span><h3 class="gold-serif">${esc(ch.title)}</h3></div>
       <div class="lesson-progress"><div class="lesson-progress-fill"></div></div>
-      ${ch.quiz && !session.revision && tierKey() !== "standard" ? `<div class="exam-clock" title="Exam protocol — the market never stops. Your ${TIERS[tierKey()].name} exam gives you ${EXAM_MIN[tierKey()]} minutes for all ${ch.quiz.length} questions — the clock starts the moment the first question appears."><span class="ec-ic">${ICONS.clock}</span><b>${fmtExamClock(EXAM_MIN[tierKey()] * 60000)}</b></div>` : ""}
+      ${ch.quiz && !session.revision && tierKey() !== "standard" ? (() => { const bm = blueprintMins(ch.id, tierKey()); return `<div class="exam-clock" title="Exam protocol — the market never stops. Your ${TIERS[tierKey()].name} exam gives you ${bm} minutes for all ${ch.quiz.length} questions — calibrated to this chapter's scope and cognitive demand. The clock starts the moment the first question appears."><span class="ec-ic">${ICONS.clock}</span><b>${fmtExamClock(bm * 60000)}</b></div>`; })() : ""}
     `));
     root.querySelector(".back").addEventListener("click", () => location.hash = "#/map");
 
@@ -4626,7 +4627,7 @@
     // persists, so re-entering can never reset it.
     if (quizQ && !rev && tierKey() !== "standard" &&
         (!S.examDeadline || S.examDeadline.ch !== ch.id || S.examDeadline.lane !== tierKey())) {
-      S.examDeadline = { ch: ch.id, lane: tierKey(), endsAt: Date.now() + EXAM_MIN[tierKey()] * 60000 };
+      S.examDeadline = { ch: ch.id, lane: tierKey(), endsAt: Date.now() + blueprintMins(ch.id, tierKey()) * 60000 };
       save();
       startExamClock(stage);
     }
@@ -4857,12 +4858,19 @@
       for (let i = corr.length - 1; i >= 0 && !corr[i]; i--) bad++;
       if (bad >= 2) nudgeLine = `<p class="quiz-nudge">${QNUDGE[(session.idx + bad) % QNUDGE.length]}</p>`;
     }
+    // Cognitive level badge — shows what skill the question tests
+    const cogBadge = q.cog ? `<span class="quiz-cog" title="This question tests: ${COG[q.cog] || q.cog}">${q.cog}</span>` : "";
+    // Diagnostic feedback — if the student chose wrong AND the distractor has a misconception tag, show what they misunderstood
+    let diagLine = "";
+    if (chosen !== undefined && chosen !== q.answer && q.misconceptions && q.misconceptions[chosen]) {
+      diagLine = `<p class="quiz-diag">${ICONS.sparkle} ${esc(q.misconceptions[chosen])}</p>`;
+    }
     return `
       <div class="quiz-card">
-        <div class="quiz-tag">Checkpoint · slide ${n}</div>
+        <div class="quiz-tag">${cogBadge}Checkpoint · slide ${n}</div>
         <p class="quiz-q">${esc(q.q)}</p>
         <div class="quiz-opts">${opts}</div>
-        ${chosen !== undefined ? `<div class="quiz-fb ${chosen === q.answer ? "good" : "bad"}">${chosen === q.answer ? "Correct." : "Not quite."} ${esc(q.explain)}${chosen === q.answer ? "" : nudgeLine}</div>` : ""}
+        ${chosen !== undefined ? `<div class="quiz-fb ${chosen === q.answer ? "good" : "bad"}">${chosen === q.answer ? "Correct." : "Not quite."} ${esc(q.explain)}${diagLine}${chosen === q.answer ? "" : nudgeLine}</div>` : ""}
       </div>`;
   }
 
@@ -5806,6 +5814,32 @@
     const itgStat = el("div", "itg-status");
     itgStat.appendChild(itgStatus);
     root.appendChild(itgStat);
+
+    // Assessment Quality Checklist — verifies every assessment against the founder's directive
+    root.appendChild(el("div", "panel", `<h3 class="panel-title gold-serif">Assessment Quality · the founder's directive</h3>
+      <p class="panel-sub">Every assessment is checked against the principle: <i>"If this student passes, would we genuinely trust they understood the material well enough to progress?"</i> Duration and difficulty must be derived from scope and cognitive demand — never from an arbitrary fixed timer.</p>`));
+    const aqc = el("div", "grade-list");
+    CHAPTERS.filter(c => c.quiz).forEach(c => {
+      const st = chState(c.id);
+      TIER_ORDER.forEach(tier => {
+        const deck = tier === 'standard' ? c : composeTier(c, tier);
+        if (!deck || !deck.quiz) return;
+        const bp = getBlueprint(c.id, tier);
+        const qCount = deck.quiz.length;
+        const cogLevels = {};
+        deck.quiz.forEach(q => { if (q.cog) cogLevels[q.cog] = (cogLevels[q.cog] || 0) + 1; });
+        const cogStr = Object.keys(cogLevels).length > 0
+          ? Object.entries(cogLevels).map(([k, v]) => k + ':' + v).join(' ')
+          : 'unmapped';
+        const checkItems = assessmentChecklist(c.id, tier);
+        const status = (st.passed || t === 'standard') ? '✅' : (st.lastScore != null ? '📊' : '⏳');
+        aqc.appendChild(el("div", "grade-row",
+          `<span class="grade-ch">${fmt(c.id)} · ${TIERS[tier].name}</span>
+           <span class="grade-why">${qCount}Q · ${bp.mins}min · cog[${cogStr}] · ${checkItems.length} checks · ${status}</span>`));
+      });
+    });
+    root.appendChild(aqc);
+    root.appendChild(el("p", "panel-sub", "cog = cognitive level distribution (R=Recall, U=Understand, C=Calculate, A=Apply, N=Analyse, S=Synthesise, D=Decide, F=Defend). Each assessment must test the important concepts, not random facts. Duration is defensible by module scope."));
 
     // Export for the moderator
     const exportBtn = el("button", "btn-gold", "Export full report (JSON)");
@@ -7766,7 +7800,7 @@ ${certMarkup({ name: d.name, code: d.code, meta, dateShort: d.dateShort, dateLon
         wireAcademyLinks(); // the return trip: My RFX Account + Reception (verified students only)
         startAcademyHealth(); // stale-server check — is the academy link live, stale or unreachable?
         ensureTrustLoaded(); // the hall pass must be armed before the first lesson — never flag a trusted student
-        runDeviceCheck();   // "Is this really you?" — the device gate precedes the session claim
+        if (!IS_DEV) runDeviceCheck();   // "Is this really you?" — dev mode skips device gate (no cloud rail)
         initSessionGuard(); // single-session guard — only acts when verified
         flagsSync();        // push any integrity flags raised since the last report
         startSysCheck();    // the machine watching the machine — clock, storage, rail

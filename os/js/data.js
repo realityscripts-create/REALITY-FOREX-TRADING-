@@ -17971,10 +17971,10 @@ const CHAPTERS = [
    ============================================================ */
 const BONUS_CHAPTER = {
   id: 14, bonus: true, title: "The Hidden Accumulation",
-  focus: "The psychology of staying rational when the market disagrees — noise vs invalidation, the RET → IMP → COR engine, the live case study, and the scaling discipline that protects your account.",
-  diff: 3, mins: 110,
-  slides: 35,
-  quizSlides: [30, 31, 32, 33, 34, 35],
+  focus: "The psychology of staying rational when the market disagrees — noise vs invalidation, the RET → IMP → COR engine, the live case study, the scaling discipline, revenge trading, euphoria traps, pre-market rituals, patience, and process-over-outcome.",
+  diff: 3, mins: 150,
+  slides: 40,
+  quizSlides: [35, 36, 37, 38, 39, 40],
   quiz: [
     { q: "Price moves against your position but holds above the structural level your thesis depends on. This is most likely…",
       options: ["Invalidation — the thesis is dead", "Noise — the thesis is not yet disproven", "A signal to add more risk immediately", "A broker error"], answer: 1,
@@ -18257,6 +18257,87 @@ const BONUS_CHAPTER = {
       insight: "Write these four answers down. The act of writing is the act of thinking. The accumulation of written discipline builds a record you can study — and a habit that will save your account."
     },
     {
+      eyebrow: "The hidden psychology · revenge",
+      title: "The Revenge Trade — Why Your Account's Worst Enemy Is Your Ego",
+      body: [
+        "A loss hits. The mind does not process it as information — it processes it as an insult. And the ego's response to an insult is immediate: get it back. That impulse is the revenge trade — the single most destructive behaviour in retail trading.",
+        "Revenge trading is not about the market. It is about you. The market does not know you exist. It does not care about your loss. It will not give you your money back because you are angry."
+      ],
+      bullets: [
+        "The urge to trade immediately after a loss — any trade, any direction, just to feel the win",
+        "Doubling the position size to 'make it back' — the size is driven by emotion, not structure",
+        "Entering a trade you did not plan — because the chart is right there and the account feels smaller",
+        "Refusing to stop trading until you are back to breakeven — the account bleeds while the ego negotiates"
+      ],
+      callout: "The revenge trade is not a strategy. It is a symptom — and the only cure is the pause.",
+      insight: "After a loss, the Trade Checkpoint is not optional — it is mandatory. The accumulation of discipline means recognising the revenge urge and walking away from it. The market will be there tomorrow. Your account may not be."
+    },
+    {
+      eyebrow: "The hidden psychology · euphoria",
+      title: "The Euphoria Trap — Why Winning Is More Dangerous Than Losing",
+      body: [
+        "A big win feels like proof. Proof that you have figured it out. Proof that the system works. Proof that you are ready for more. That feeling is the most dangerous moment in a trader's career — not the loss, but the win.",
+        "The euphoria trap works like this: the win creates confidence, the confidence creates larger positions, the larger positions create larger drawdowns, and the larger drawdowns destroy the account. The win was the beginning of the end."
+      ],
+      bullets: [
+        "After a win, the natural impulse is to trade more — more positions, more size, more frequency",
+        "The win feels like evidence that your risk rules are too conservative",
+        "The mind starts 'seeing' setups that were not there before — because it wants to feel the win again",
+        "The account grows, and with it grows the tolerance for risk — until the tolerance exceeds the edge"
+      ],
+      callout: "The win is not permission to change the rules. The rules are what created the win.",
+      insight: "After a significant win, the most professional thing you can do is nothing. Let the account sit. Let the confidence settle. The accumulation of discipline means treating wins with the same respect as losses — as information, not as invitations."
+    },
+    {
+      eyebrow: "The hidden psychology · routine",
+      title: "The Pre-Market Ritual — How Professionals Prepare Before the Chart Opens",
+      body: [
+        "The amateur opens the chart and starts looking for trades. The professional opens the chart and starts looking for context. The difference is not skill — it is preparation.",
+        "A pre-market ritual is not a suggestion. It is a boundary between recreational behaviour and professional practice. The ritual does three things: it transitions your mind from personal life to market analysis, it establishes the context for the session, and it prevents impulsive entries."
+      ],
+      bullets: [
+        "Review the daily timeframe first — what is the macro structure telling you?",
+        "Identify the key levels for the day — where are the decisions being made?",
+        "Check your account state — open positions, margin usage, daily risk already taken",
+        "Set your maximum risk for the session — not per trade, but for the entire session",
+        "Write down your thesis for the day — one sentence, conditional, with invalidation level"
+      ],
+      callout: "The ritual is not about predicting. It is about arriving prepared.",
+      insight: "The accumulation of preparation is the accumulation of clarity. When you arrive at the chart with context already in your mind, the trades find you — instead of you chasing them."
+    },
+    {
+      eyebrow: "The hidden psychology · patience",
+      title: "Patience as a Skill — The Most Undervalued Edge in Trading",
+      body: [
+        "Patience is not waiting. Waiting is passive — sitting at the screen, watching candles, hoping something happens. Patience is active — it is the disciplined decision to not act until the conditions you defined are met.",
+        "The market offers hundreds of potential entries every day. The professional takes maybe two or three. Not because the rest are bad — but because only two or three meet every criterion in the plan."
+      ],
+      bullets: [
+        "Patience means waiting for the setup, not forcing the trade",
+        "Patience means accepting that some days there is nothing to do",
+        "Patience means letting the structure develop instead of entering at the first sign of movement",
+        "Patience means trusting that the next opportunity is coming — because the market never stops"
+      ],
+      callout: "The hardest trade is no trade. The most profitable decision is often the one you did not make.",
+      insight: "The accumulation of patience is the accumulation of selectivity — and selectivity is the edge that separates consistent traders from gamblers. The market pays the patient."
+    },
+    {
+      eyebrow: "The hidden psychology · process",
+      title: "Process Over Outcome — The Truth That Separates Professionals from Gamblers",
+      body: [
+        "A trade can be perfect and still lose. A trade can be terrible and still win. The outcome of a single trade tells you almost nothing about the quality of the decision. The process tells you everything.",
+        "This is the hardest concept in trading — because the mind is wired to judge by results. But the professional judges by process. The amateur judges by profit."
+      ],
+      bullets: [
+        "A losing trade executed perfectly is a success — the process protected the account",
+        "A winning trade executed recklessly is a failure — the process will eventually destroy the account",
+        "The edge emerges over 50, 100, 200 trades — never in one",
+        "Your journal is not a profit log — it is a process audit"
+      ],
+      callout: "The market is a voting machine in the short term and a weighing machine in the long term. So is your trading account.",
+      insight: "The accumulation of process is the accumulation of edge — and the edge only reveals itself over time. Judge every trade by the process, not the result. The results will take care of themselves."
+    },
+    {
       eyebrow: "The research protocol",
       title: "Turning Gems Into Data",
       body: [
@@ -18448,6 +18529,236 @@ const BONUS_CHAPTER = {
     ]
   }
 };
+
+/* ============================================================
+   Assessment Blueprint System
+   Founder Directive: Assessment duration and difficulty must be
+   derived from depth, breadth, cognitive demand and practical
+   application — never from an arbitrary fixed timer.
+
+   Three lanes, three contracts:
+     Standard    — Understanding + foundational competence + safe application
+     Challenging — Application + synthesis + calculation + decision-making
+     Elite       — Advanced synthesis + quantitative reasoning + professional
+                   decision-making + ability to defend a trading conclusion
+
+   Cognitive levels (Bloom's taxonomy adapted for trading):
+     R = Recall        — remember definitions, terminology
+     U = Understand     — explain why something works
+     C = Calculate      — perform the mathematics
+     A = Apply          — use the concept on an unfamiliar scenario
+     N = Analyse        — break down a complex situation
+     S = Synthesise     — combine multiple concepts to reach a conclusion
+     D = Decide         — make the correct trading decision
+     F = Defend         — justify and defend a trading conclusion
+   ============================================================ */
+const COG = { R: "Recall", U: "Understand", C: "Calculate", A: "Apply", N: "Analyse", S: "Synthesise", D: "Decide", F: "Defend" };
+
+/* Blueprint per chapter per tier.
+   mins   — total exam minutes (intelligently calibrated, NOT arbitrary)
+   qCount — number of assessment questions
+   cog    — cognitive level distribution (must add up to qCount)
+   focus  — what the assessment must establish
+   quality — checklist items specific to this assessment
+*/
+const ASSESS_BLUEPRINTS = {
+  1: {
+    standard:    { mins: 12, qCount: 10, cog: { R: 3, U: 4, A: 3 },
+      focus: "Market basics, player types, trading styles — foundational vocabulary and safe conceptual understanding",
+      quality: ["Definitions tested (not just recognised)", "Trader type identification uses scenario, not label matching", "Trading style questions require matching style to situation"] },
+    challenging: { mins: 18, qCount: 12, cog: { R: 1, U: 2, A: 4, N: 3, D: 2 },
+      focus: "Apply market knowledge to session selection, broker evaluation, and real-world market scenarios",
+      quality: ["Session timing questions use actual clock scenarios", "Broker evaluation requires comparing two options", "At least one question combines two concepts (synthesis)"] },
+    elite:       { mins: 28, qCount: 15, cog: { U: 1, A: 3, N: 4, S: 3, D: 3, F: 1 },
+      focus: "Institutional-grade market analysis: session overlap effects, liquidity depth, macro-to-micro reasoning",
+      quality: ["Scenario uses unfamiliar market condition", "Requires multi-step reasoning", "One question asks student to defend a conclusion", "Distractors represent genuine institutional misconceptions"] }
+  },
+  2: {
+    standard:    { mins: 15, qCount: 10, cog: { R: 2, U: 3, C: 3, A: 2 },
+      focus: "Core terminology: pips, lots, leverage, margin — with basic calculations",
+      quality: ["Pip value calculation tested (not just defined)", "Leverage question requires understanding of amplification", "Lot size question uses real account numbers"] },
+    challenging: { mins: 22, qCount: 12, cog: { R: 1, U: 1, C: 4, A: 4, N: 2 },
+      focus: "Applied calculations: pip value across pairs, margin calls, lot sizing under risk constraints",
+      quality: ["Calculation questions use different base currencies", "Margin call scenario requires 2-step reasoning", "One question combines pip value + lot sizing"] },
+    elite:       { mins: 32, qCount: 15, cog: { C: 3, A: 4, N: 3, S: 3, D: 2 },
+      focus: "Professional lot sizing: cross-pair pip value, weighted margin, portfolio-level exposure",
+      quality: ["Uses unfamiliar currency pair for calculation", "Requires synthesising multiple cost components", "Position sizing question has real account constraints", "One question requires defending a sizing decision"] }
+  },
+  3: {
+    standard:    { mins: 14, qCount: 10, cog: { R: 3, U: 4, A: 3 },
+      focus: "Economic indicators: what they measure, leading vs lagging, basic impact on currencies",
+      quality: ["Indicator classification uses real-world examples", "Leading/lagging distinction tested with timing scenarios", "Impact questions pair indicator with currency movement"] },
+    challenging: { mins: 20, qCount: 12, cog: { R: 1, U: 2, A: 4, N: 3, D: 2 },
+      focus: "Interpreting economic data: reading NFP, CPI, interest rate decisions in context",
+      quality: ["Questions use actual data prints (not hypothetical)", "Requires reading a data release against expectations", "One question combines two indicators for a trade decision"] },
+    elite:       { mins: 30, qCount: 15, cog: { U: 1, A: 3, N: 4, S: 3, D: 3, F: 1 },
+      focus: "Macro regime analysis: policy divergence, carry trade logic, central bank reaction functions",
+      quality: ["Scenario uses real central bank decision context", "Requires connecting interest rate differential to currency flow", "One question asks student to justify a macro thesis", "Distractors represent common fundamental analysis errors"] }
+  },
+  4: {
+    standard:    { mins: 15, qCount: 10, cog: { R: 2, U: 4, A: 4 },
+      focus: "Candlestick anatomy: body, wick, open/close — single and multi-candle patterns",
+      quality: ["Pattern identification uses actual chart scenarios", "Questions test understanding of what price did (not just pattern name)", "Bullish vs bearish distinction uses context, not colour alone"] },
+    challenging: { mins: 22, qCount: 12, cog: { R: 1, U: 2, A: 5, N: 3, D: 1 },
+      focus: "Pattern recognition in context: engulfing, doji, hammer — with confirmation requirements",
+      quality: ["Questions present patterns within a trend context", "Requires distinguishing valid from invalid pattern interpretation", "One question combines pattern + volume/context"] },
+    elite:       { mins: 30, qCount: 15, cog: { U: 1, A: 3, N: 4, S: 3, D: 3, F: 1 },
+      focus: "Professional candle reading: wick analysis, distribution signatures, accumulation patterns",
+      quality: ["Uses unfamiliar chart scenarios", "Requires multi-timeframe candle interpretation", "One question asks student to defend pattern reading against an alternative interpretation"] }
+  },
+  5: {
+    standard:    { mins: 15, qCount: 10, cog: { R: 2, U: 3, C: 2, A: 3 },
+      focus: "Trend identification: higher highs/lows, ranging markets, basic momentum concepts",
+      quality: ["Trend identification uses real price sequences", "Calculation questions test basic momentum", "Range vs trend distinction uses ambiguous examples"] },
+    challenging: { mins: 22, qCount: 12, cog: { R: 1, U: 1, C: 3, A: 4, N: 3 },
+      focus: "Applied momentum analysis: divergence, pullback entries, trend strength assessment",
+      quality: ["Divergence questions require reading actual indicator values", "Pullback entry questions test timing, not just direction", "One question combines trend + momentum for a decision"] },
+    elite:       { mins: 32, qCount: 15, cog: { C: 2, A: 3, N: 4, S: 3, D: 2, F: 1 },
+      focus: "Institutional flow analysis: volume profile, order flow, trend exhaustion signals",
+      quality: ["Uses unfamiliar market structure scenario", "Requires combining volume + price action + momentum", "One question requires defending a trend exhaustion call"] }
+  },
+  6: {
+    standard:    { mins: 12, qCount: 10, cog: { R: 2, U: 5, A: 3 },
+      focus: "Core psychology: fear/greed cycle, emotional triggers, journaling importance",
+      quality: ["Questions test understanding of WHY emotions affect trading (not just identifying them)", "Journaling question connects to specific trading benefit", "Fear/greed cycle tested with scenario, not label"] },
+    challenging: { mins: 18, qCount: 12, cog: { R: 1, U: 3, A: 5, N: 3 },
+      focus: "Applied psychology: recognising emotional states in real trading scenarios",
+      quality: ["Scenarios present real emotional traps (revenge, FOMO, overconfidence)", "Questions require identifying the emotional state AND the correct response", "One question combines psychology with risk management"] },
+    elite:       { mins: 26, qCount: 15, cog: { U: 2, A: 4, N: 4, S: 3, D: 2 },
+      focus: "Professional discipline: systematic decision-making under uncertainty, cognitive bias recognition",
+      quality: ["Questions use realistic institutional trading scenarios", "Requires recognising cognitive biases in decision-making", "One question tests whether student can design a personal discipline system"] }
+  },
+  7: {
+    standard:    { mins: 15, qCount: 10, cog: { R: 2, U: 3, C: 3, A: 2 },
+      focus: "Risk per trade, stop loss placement, basic position sizing, reward-to-risk",
+      quality: ["Position sizing calculation with real account numbers", "Stop loss question tests placement logic, not just definition", "Reward-to-risk requires actual ratio calculation"] },
+    challenging: { mins: 24, qCount: 12, cog: { R: 1, U: 1, C: 4, A: 4, N: 2 },
+      focus: "Applied risk management: portfolio risk, drawdown math, circuit breaker rules",
+      quality: ["Drawdown recovery calculation (50% loss needs 100% gain)", "Portfolio risk combines multiple positions", "Circuit breaker scenario requires applying the rule under pressure"] },
+    elite:       { mins: 34, qCount: 15, cog: { C: 3, A: 3, N: 3, S: 3, D: 2, F: 1 },
+      focus: "Professional risk architecture: Kelly criterion, portfolio heat, correlation-adjusted sizing",
+      quality: ["Kelly criterion calculation with real win rate data", "Portfolio heat requires summing correlated risks", "One question asks student to defend a risk framework", "Uses unfamiliar scenario with multiple risk factors"] }
+  },
+  8: {
+    standard:    { mins: 14, qCount: 10, cog: { R: 3, U: 4, A: 3 },
+      focus: "Major/minor/exotic pairs, correlation basics, session-specific behaviour",
+      quality: ["Pair classification uses real examples", "Correlation question tests understanding of relationship direction", "Session behaviour pairs with actual time zones"] },
+    challenging: { mins: 20, qCount: 12, cog: { R: 1, U: 2, A: 5, N: 3, D: 1 },
+      focus: "Applied pair selection: correlation strength, spread analysis, session timing",
+      quality: ["Correlation questions use actual pair data", "Spread analysis requires comparing two pairs", "One question combines correlation + session for a trade decision"] },
+    elite:       { mins: 28, qCount: 15, cog: { U: 1, A: 3, N: 4, S: 3, D: 3, F: 1 },
+      focus: "Institutional pair analysis: cross-rate mechanics, correlation regime changes, carry-adjusted spreads",
+      quality: ["Uses unfamiliar pair combination", "Requires understanding how correlation regimes shift", "One question asks student to defend a pair selection against an alternative"] }
+  },
+  9: {
+    standard:    { mins: 14, qCount: 10, cog: { R: 3, U: 4, A: 3 },
+      focus: "Order types: market, limit, stop — when to use each, basic execution mechanics",
+      quality: ["Order type selection uses real entry scenarios", "Questions test understanding of WHEN to use each type (not just what it is)", "Limit vs stop distinction tested with price scenarios"] },
+    challenging: { mins: 20, qCount: 12, cog: { R: 1, U: 2, A: 5, N: 3, D: 1 },
+      focus: "Applied order management: partial fills, slippage, order timing around news",
+      quality: ["Slippage scenario uses real spread conditions", "News event order timing requires understanding liquidity", "One question combines order type + risk management"] },
+    elite:       { mins: 28, qCount: 15, cog: { U: 1, A: 3, N: 4, S: 3, D: 3, F: 1 },
+      focus: "Professional execution: order flow, institutional execution algorithms, market microstructure",
+      quality: ["Uses unfamiliar execution scenario", "Requires understanding how institutional orders move price", "One question asks student to defend an execution strategy"] }
+  },
+  10: {
+    standard:    { mins: 16, qCount: 10, cog: { R: 2, U: 4, C: 2, A: 2 },
+      focus: "Indicator basics: MA, RSI, MACD — what they measure, how to read them",
+      quality: ["Indicator reading uses actual values (not just direction)", "Calculation questions test basic indicator math", "Crossover questions test timing, not just definition"] },
+    challenging: { mins: 24, qCount: 12, cog: { R: 1, U: 1, C: 3, A: 4, N: 3 },
+      focus: "Applied indicator analysis: divergence, overbought/oversold in context, indicator combinations",
+      quality: ["Divergence questions use actual indicator values", "Overbought/oversold tested with trend context", "One question combines two indicators for a signal"] },
+    elite:       { mins: 34, qCount: 15, cog: { C: 2, A: 3, N: 4, S: 3, D: 2, F: 1 },
+      focus: "Professional indicator use: adaptive indicators, regime detection, indicator-free price action",
+      quality: ["Uses unfamiliar indicator configuration", "Requires understanding when indicators fail", "One question asks student to defend indicator choice against price-action-only approach"] }
+  },
+  11: {
+    standard:    { mins: 14, qCount: 10, cog: { R: 2, U: 4, A: 4 },
+      focus: "Accumulation, markup, distribution, decline — Wyckoff phases and their characteristics",
+      quality: ["Phase identification uses real price sequences", "Questions test understanding of what each phase MEANS (not just its name)", "Phase transitions tested with turning-point scenarios"] },
+    challenging: { mins: 20, qCount: 12, cog: { R: 1, U: 2, A: 5, N: 3, D: 1 },
+      focus: "Applied cycle analysis: reading current phase, timing entries within phases",
+      quality: ["Questions present ambiguous phase scenarios", "Requires distinguishing similar phases (accumulation vs range)", "One question combines phase identification + trade timing"] },
+    elite:       { mins: 28, qCount: 15, cog: { U: 1, A: 3, N: 4, S: 3, D: 3, F: 1 },
+      focus: "Institutional cycle analysis: composite operator behaviour, phase duration estimation, multi-timeframe cycles",
+      quality: ["Uses unfamiliar cycle scenario", "Requires connecting cycle phase to institutional positioning", "One question asks student to defend a phase reading against an alternative interpretation"] }
+  },
+  12: {
+    standard:    { mins: 16, qCount: 10, cog: { R: 2, U: 4, A: 4 },
+      focus: "Stock market basics: exchanges, indices, how stocks differ from forex",
+      quality: ["Questions test understanding of structural differences (not just definitions)", "Index questions use real examples (S&P, JSE)", "Forex vs stock comparison requires applying knowledge of both"] },
+    challenging: { mins: 22, qCount: 12, cog: { R: 1, U: 2, A: 4, N: 3, D: 2 },
+      focus: "Applied stock analysis: reading earnings, understanding sector rotation, basic valuation",
+      quality: ["Earnings questions use real data prints", "Sector rotation requires connecting macro to equity flow", "One question combines stock analysis with currency impact"] },
+    elite:       { mins: 30, qCount: 15, cog: { U: 1, A: 3, N: 4, S: 3, D: 3, F: 1 },
+      focus: "Professional equity analysis: DCF interpretation, market structure, cross-asset correlation",
+      quality: ["Uses unfamiliar equity scenario", "Requires connecting fundamental valuation to technical timing", "One question asks student to defend an equity thesis against competing data"] }
+  },
+  13: {
+    standard:    { mins: 18, qCount: 10, cog: { R: 1, U: 3, C: 2, A: 3, N: 1 },
+      focus: "Technical analysis foundations: support/resistance, trendlines, chart patterns",
+      quality: ["Support/resistance drawn on real price levels (not abstract)", "Calculation questions test basic pattern measurements", "Pattern recognition uses actual chart scenarios"] },
+    challenging: { mins: 26, qCount: 12, cog: { R: 1, U: 1, C: 2, A: 4, N: 3, D: 1 },
+      focus: "Applied TA: multi-timeframe analysis, confluence zones, trade plan construction",
+      quality: ["Multi-timeframe questions require reading 2+ timeframes", "Confluence zone requires combining 2+ TA tools", "One question requires constructing a complete trade plan"] },
+    elite:       { mins: 36, qCount: 15, cog: { C: 2, A: 3, N: 3, S: 3, D: 3, F: 1 },
+      focus: "Professional TA: institutional order flow, market structure breaks, systematic trade journals",
+      quality: ["Uses unfamiliar chart scenario", "Requires combining TA with volume and order flow", "One question asks student to defend a technical thesis against fundamental data", "Includes a calculation that requires 3+ steps"] }
+  },
+  // The Hidden Accumulation (bonus chapter)
+  bonus: {
+    standard:    { mins: 15, qCount: 6, cog: { R: 1, U: 2, A: 2, D: 1 },
+      focus: "Core accumulation concepts: patience, process-over-outcome, revenge trading recognition",
+      quality: ["Questions test understanding of psychological traps (not just identification)", "Requires connecting concepts to real trading scenarios", "Includes at least one decision-making question"] },
+    challenging: { mins: 20, qCount: 6, cog: { U: 1, A: 2, N: 1, D: 2 },
+      focus: "Applied accumulation: scaling discipline, portfolio-level thinking, research framework",
+      quality: ["Scaling questions use real entry prices", "Portfolio correlation requires combining concepts", "Decision questions test professional-level judgement"] },
+    elite:       { mins: 28, qCount: 6, cog: { A: 1, N: 1, S: 2, D: 1, F: 1 },
+      focus: "Elite accumulation: Kelly criterion, institutional decision trees, multi-factor synthesis",
+      quality: ["Requires synthesising 3+ concepts from earlier chapters", "Decision tree question has 4+ factors", "One question asks student to defend a scaling hypothesis", "Uses realistic multi-position scenario"] }
+  }
+};
+
+/* Get the assessment blueprint for a chapter + tier.
+   Falls back to sensible defaults if no blueprint exists. */
+function getBlueprint(chId, tier) {
+  const ch = chId === 'bonus' || chId === -1 ? 'bonus' : chId;
+  const bp = ASSESS_BLUEPRINTS[ch] && ASSESS_BLUEPRINTS[ch][tier];
+  if (bp) return bp;
+  // Fallback: derive from question count and tier defaults
+  const defaults = { standard: { mins: 12, cog: { R: 3, U: 4, A: 3 } },
+    challenging: { mins: 20, cog: { R: 1, U: 2, A: 4, N: 3, D: 2 } },
+    elite: { mins: 30, cog: { U: 1, A: 3, N: 4, S: 3, D: 3, F: 1 } } };
+  const d = defaults[tier] || defaults.standard;
+  return { mins: d.mins, qCount: 10, cog: d.cog, focus: "Assessment calibrated from module scope", quality: [] };
+}
+
+/* Compute exam minutes for a chapter + tier from the blueprint.
+   Replaces the old hardcoded EXAM_MIN. */
+function blueprintMins(chId, tier) {
+  if (tier === 'standard') return 0; // Standard remains untimed
+  const bp = getBlueprint(chId, tier);
+  return bp.mins;
+}
+
+/* Quality checklist for assessment auditing.
+   Returns the checklist items for a given chapter + tier. */
+function assessmentChecklist(chId, tier) {
+  const bp = getBlueprint(chId, tier);
+  const base = [
+    "Assessment duration is justified by module scope and cognitive demand",
+    "Assessment tests the important concepts, not random facts",
+    "Knowledge, understanding and application are appropriately represented",
+    "Multi-concept synthesis is assessed where applicable",
+    "At least some questions require unfamiliar application",
+    "Explanations teach the underlying concept",
+    "Higher-tier questions require higher-order thinking",
+    "Elite assessments include professional decision-making",
+    "Assessment provides sufficient evidence of mastery before progression",
+    "Duration can be defended in a curriculum review"
+  ];
+  return base.concat(bp.quality || []);
+}
 
 function slidePath(ch, n) {
   return "assets/slides/ch" + ch + "/slide-" + String(n).padStart(2, "0") + ".png";

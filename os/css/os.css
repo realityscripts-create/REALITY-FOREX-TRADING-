@@ -852,6 +852,19 @@ h2 { font-family: var(--font-heading); font-size: clamp(26px, 3.4vw, 38px); font
 .quiz-fb { margin-top: 16px; padding: 14px 18px; border-radius: 10px; font-size: 14px; }
 .quiz-fb.good { background: rgba(46,139,87,.12); border: 1px solid rgba(46,139,87,.4); }
 .quiz-fb.bad { background: rgba(192,57,43,.1); border: 1px solid rgba(192,57,43,.35); }
+.quiz-cog {
+  display: inline-block; padding: 2px 7px; margin-right: 8px;
+  font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+  background: rgba(212,175,55,.12); border: 1px solid rgba(212,175,55,.3);
+  border-radius: 4px; color: var(--accent-gold); font-weight: 600;
+  vertical-align: middle;
+}
+.quiz-diag {
+  margin-top: 8px; padding: 8px 12px;
+  background: rgba(232,163,61,.08); border-left: 3px solid var(--accent-gold);
+  border-radius: 0 6px 6px 0; font-size: 13px; color: var(--text-muted);
+  font-style: italic;
+}
 
 /* Finish + poll */
 .finish-card, .poll-card {
